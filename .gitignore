@@ -14,3 +14,9 @@ site/
 .vscode/
 .idea/
 .DS_Store
+
+# Recibos y temporales de archify (contienen rutas locales)
+docs/arquitectura/*.finalize*.json
+docs/arquitectura/*.browser-check.json
+docs/arquitectura/*.delivery.json
+docs/arquitectura/.archify-delivery-*/

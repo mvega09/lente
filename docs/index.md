@@ -11,7 +11,7 @@ microestructura) y una IA local (Ollama) revisa la idea principal.
 | Acceso a datos | psycopg 3 (SQL directo, sin ORM) |
 | Base de datos | PostgreSQL 16 (esquema `lente`) |
 | IA | Ollama (Qwen3) con salida estructurada |
-| Frontend | Next.js (repositorio aparte) |
+| Frontend | Repositorio aparte (tecnología por definir) |
 
 - [Instalación](instalacion.md)
 - [Arquitectura](arquitectura.md)

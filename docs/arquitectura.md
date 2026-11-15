@@ -1,8 +1,22 @@
 # Arquitectura
 
+![Arquitectura del backend de LENTE](arquitectura/lente-arquitectura-claro.png)
+
+[Abrir el diagrama interactivo](arquitectura/lente-arquitectura.html): se
+puede acercar, buscar componentes, seguir una ruta, cambiar a tema oscuro y
+abrir el código que respalda cada caja. Se genera con
+[archify](https://github.com/tt-a1i/archify) a partir de
+`arquitectura/lente.architecture.json`; para regenerarlo:
+
+```bash
+node <ruta-de-archify>/bin/archify.mjs finalize architecture \
+    docs/arquitectura/lente.architecture.json docs/arquitectura/lente-arquitectura.html \
+    --repo-root . --quality showcase
 ```
-Navegador → Nginx → Next.js (UI) → FastAPI → PostgreSQL ← worker de IA → Ollama
-```
+
+Las citas de código del diagrama apuntan a la revisión fijada en
+`meta.repository.revision`; al cambiar la arquitectura, actualice esa revisión
+y las líneas citadas.
 
 La mayor parte de la lógica de negocio vive en PostgreSQL (triggers,
 funciones y vistas). El backend es delgado: llama funciones, lee vistas y

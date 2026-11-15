@@ -1,0 +1,355 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "LENTE · Arquitectura del backend",
+    "locale": "es",
+    "output": "docs/arquitectura/lente-arquitectura.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/mvega09/lente.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "72e4c8229a62b170e3757d5a77b862d65ca64d08"
+    }
+  },
+  "components": [
+    {
+      "id": "aula",
+      "type": "external",
+      "label": "Profesor y estudiante",
+      "sublabel": "modo aula",
+      "pos": [
+        40,
+        200
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "Frontend",
+      "sublabel": "repositorio aparte",
+      "pos": [
+        240,
+        200
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "sesion",
+      "type": "security",
+      "label": "Sesión JWT",
+      "sublabel": "8 h · roles",
+      "pos": [
+        530,
+        40
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "tag": "admin / profesor",
+      "sources": [
+        {
+          "path": "app/core/security.py",
+          "line": 19,
+          "end_line": 62
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "API FastAPI",
+      "sublabel": ":8000 · 60 operaciones",
+      "pos": [
+        530,
+        200
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "app/main.py",
+          "line": 27,
+          "end_line": 50
+        },
+        {
+          "path": "app/core/db.py",
+          "line": 21,
+          "end_line": 30
+        },
+        {
+          "path": "deploy/lente-api.service",
+          "line": 14
+        }
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Workers de IA ×4",
+      "sublabel": "rol lente_ia",
+      "pos": [
+        530,
+        360
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "tag": "sin nombres",
+      "sources": [
+        {
+          "path": "worker/ia_worker.py",
+          "line": 184,
+          "end_line": 195
+        },
+        {
+          "path": "worker/ia_worker.py",
+          "line": 198,
+          "end_line": 223
+        },
+        {
+          "path": "deploy/lente-worker@.service",
+          "line": 14
+        }
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "PostgreSQL 16",
+      "sublabel": "esquema lente",
+      "pos": [
+        850,
+        200
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "triggers y funciones",
+      "sources": [
+        {
+          "path": "db/schema.sql",
+          "line": 441,
+          "end_line": 453
+        },
+        {
+          "path": "db/schema.sql",
+          "line": 485,
+          "end_line": 500
+        },
+        {
+          "path": "db/schema.sql",
+          "line": 782,
+          "end_line": 802
+        }
+      ]
+    },
+    {
+      "id": "cola",
+      "type": "messagebus",
+      "label": "Cola de IA",
+      "sublabel": "cola_ia · prioridad",
+      "pos": [
+        850,
+        360
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "SKIP LOCKED",
+      "sources": [
+        {
+          "path": "db/schema.sql",
+          "line": 249,
+          "end_line": 267
+        },
+        {
+          "path": "db/schema.sql",
+          "line": 603,
+          "end_line": 613
+        }
+      ]
+    },
+    {
+      "id": "rapido",
+      "type": "cloud",
+      "label": "qwen3:4b",
+      "sublabel": "siempre cargado",
+      "pos": [
+        400,
+        600
+      ],
+      "size": [
+        190,
+        64
+      ],
+      "tag": "12–22 s",
+      "sources": [
+        {
+          "path": "app/core/config.py",
+          "line": 33,
+          "end_line": 39
+        },
+        {
+          "path": "worker/ia_worker.py",
+          "line": 71,
+          "end_line": 84
+        },
+        {
+          "path": "worker/ia_worker.py",
+          "line": 89,
+          "end_line": 111
+        }
+      ]
+    },
+    {
+      "id": "grande",
+      "type": "cloud",
+      "label": "qwen3:14b",
+      "sublabel": "en segundo plano",
+      "pos": [
+        650,
+        600
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "≈ 5 min",
+      "sources": [
+        {
+          "path": "app/core/config.py",
+          "line": 34
+        },
+        {
+          "path": "worker/ia_worker.py",
+          "line": 113,
+          "end_line": 155
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "VM-APP · 10.60.14.182",
+      "wraps": [
+        "sesion",
+        "api",
+        "worker"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "VM-BD · 10.60.14.183",
+      "wraps": [
+        "db",
+        "cola"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "VM-IA · Ollama",
+      "wraps": [
+        "rapido",
+        "grande"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "aula-usa",
+      "from": "aula",
+      "to": "frontend",
+      "label": "usa"
+    },
+    {
+      "id": "frontend-api",
+      "from": "frontend",
+      "to": "api",
+      "label": "HTTPS JSON",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api-sesion",
+      "from": "api",
+      "to": "sesion",
+      "label": "valida token",
+      "variant": "security"
+    },
+    {
+      "id": "api-db",
+      "from": "api",
+      "to": "db",
+      "label": "SQL · lente_app",
+      "variant": "emphasis"
+    },
+    {
+      "id": "db-cola",
+      "from": "db",
+      "to": "cola",
+      "label": "triggers encolan"
+    },
+    {
+      "id": "worker-cola",
+      "from": "worker",
+      "to": "cola",
+      "label": "toma y guarda"
+    },
+    {
+      "id": "worker-rapido",
+      "from": "worker",
+      "to": "rapido",
+      "label": "idea y ánimo"
+    },
+    {
+      "id": "worker-grande",
+      "from": "worker",
+      "to": "grande",
+      "label": "prepara textos",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Macroestructura en vivo",
+      "items": [
+        "El estudiante envía su idea principal y la API responde «analizando» al instante",
+        "Un trigger la encola con prioridad 1 y un worker la toma",
+        "qwen3:4b la revisa y la base verifica que la cita exista en la noticia"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Super y micro sin IA",
+      "items": [
+        "Las preguntas y las palabras cargadas las califica PostgreSQL con triggers",
+        "El profesor aprueba antes lo que propuso qwen3:14b"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Seguridad y privacidad",
+      "items": [
+        "Token JWT de 8 h con roles administrador y profesor",
+        "Cada profesor solo ve lo suyo: lo ajeno responde 404",
+        "El rol lente_ia no puede leer nombres de estudiantes"
+      ]
+    }
+  ]
+}
