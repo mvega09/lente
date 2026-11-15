@@ -58,5 +58,14 @@ def test_precalentar_no_detiene_el_worker_si_ollama_falla(monkeypatch):
     assert ia_worker.precalentar(_ConexionAjustes()) is False
 
 
+def test_faltantes_cortados_quedan_en_el_ultimo_elemento_completo():
+    cortado = "denuncia de los pescadores, la empresa niega la responsabilidad, la autoridad aN"
+    assert len(cortado) == 80
+    rev = RevisionIdea(veredicto="por_mejorar", faltantes=cortado, explicacion="x", cita="y")
+    assert rev.faltantes == "denuncia de los pescadores, la empresa niega la responsabilidad"
+    corto = RevisionIdea(veredicto="por_mejorar", faltantes=" la mina, los peces ", explicacion="x", cita="y")
+    assert corto.faltantes == "la mina, los peces"
+
+
 def test_validacion_queda_siempre_cargada_por_defecto():
     assert ia_worker.settings.ollama_keep_alive_validacion.startswith("-")
