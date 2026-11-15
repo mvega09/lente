@@ -37,7 +37,7 @@ def test_crear_excel(tmp_path):
     ev, ia, res = wb["1. Su evaluación"], wb["2. Respuestas de la IA"], wb["Resultado"]
     # El docente no ve el veredicto de la IA en su hoja
     assert all(c.value not in VEREDICTOS.values() for fila in ev.iter_rows() for c in fila)
-    assert ev.data_validations.dataValidation[0].sqref.ranges[0].coord == "E2:E5"
+    assert str(ev.data_validations.dataValidation[0].sqref) == "E2:E5"
     assert ia["C2"].value == "Coincide" and ia["C5"].value == "Error"
     assert ia["H2"].value.startswith("=IF('1. Su evaluación'!E2")
     assert res["B2"].value == 4
