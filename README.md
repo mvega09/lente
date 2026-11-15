@@ -213,6 +213,6 @@ Sitio de documentación local: `mkdocs serve -a 0.0.0.0:8001`.
 
 ## 🎓 Créditos
 
-Proyecto de grado del semillero de investigación de la **Universidad de Manizales**. Este repositorio contiene el backend; el frontend se desarrolla en un repositorio aparte.
+Proyecto de grado del semillero de investigación de la **Universidad de Manizales**. Este repositorio contiene el backend.
 
 El repositorio no tiene licencia de código abierto: todos los derechos quedan reservados a sus autores.
