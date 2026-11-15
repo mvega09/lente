@@ -1,0 +1,51 @@
+# Hoja de ruta del backend
+
+Basada en el *Levantamiento de requerimientos v1.1 (IA)*, el esquema
+`Info_bd/schema.sql` y los documentos técnicos del proyecto.
+
+## Principios
+
+- **La lógica vive en PostgreSQL.** Calificación de super y micro, cola de IA,
+  puntos, rachas, logros y alertas ya están en triggers y funciones. El backend
+  llama esas funciones y lee las vistas; no las duplica.
+- **Aislamiento por profesor (RNF-05).** Toda consulta de un profesor filtra por
+  el `profesor_id` del token. Un recurso de otro profesor responde **404**.
+- **Privacidad (RNF-06).** Al modelo solo van texto y respuesta; el worker usa el
+  rol `lente_ia`, que no ve nombres. No se guardan prompts completos.
+- **Configurable sin código (RNF-08).** Puntos, umbrales, modelo y prompts se
+  leen de la tabla `ajustes`.
+
+## Módulos y estado
+
+| # | Módulo | Requisitos | Endpoints principales | Estado |
+|---|---|---|---|---|
+| 1 | Sesión | RF-01 | `POST /auth/login`, `GET /auth/yo`, `POST /auth/cambiar-clave` | Login listo |
+| 2 | Administración | RF-02, RF-04 | `/admin/profesores`, `/admin/resumen` | Pendiente |
+| 3 | Cursos y estudiantes | RF-03, RF-05, RF-20 | `/cursos`, `/cursos/{id}/estudiantes`, `/estudiantes/{id}` | Pendiente |
+| 4 | Biblioteca de textos | RF-09 | `/textos`, `/textos/{id}/preparar`, `/textos/{id}/aprobar`, preguntas y palabras | Pendiente |
+| 5 | Activación en curso | RF-09 | `/cursos/{id}/textos` | Pendiente |
+| 6 | Actividad del estudiante | RF-10, RF-11, RF-12, RF-15, RNF-03 | `/actividades`, `/actividades/{id}/macro|super|micro`, `/actividades/{id}/terminar` | Pendiente |
+| 7 | Resultado | RF-16, RF-17 | `/actividades/{id}/resultado` | Pendiente |
+| 8 | Progreso y estadísticas | RF-06, RF-07, RF-08 | `/estudiantes/{id}/progreso`, `/historial` | Pendiente |
+| 9 | Resaltado y explicación | RF-13, RF-14 | `/textos/{id}/resaltados` | Pendiente |
+| 10 | Gamificación | RF-18 | `/estudiantes/{id}/logros`, `/cursos/{id}/ajustes` | Pendiente |
+| 11 | Adaptación por grado | RF-19 | Campo `nivel_escolar` y dificultad máxima en la actividad | Pendiente |
+| 12 | Panel del docente y ánimo | RF-21 | `/cursos/{id}/panel`, `/alertas` | Pendiente |
+| 13 | Worker de IA | RF-09, RF-10, RF-21 | Proceso `worker.ia_worker` | Primera versión |
+
+## Decisiones abiertas (para el equipo)
+
+1. **Cómo entra el estudiante sin cuenta.** El v1.1 dice que no inicia sesión.
+   Propuesta inicial: el profesor abre la actividad para un estudiante desde su
+   sesión (modo aula / videobeam) y el estudiante responde en ese dispositivo.
+   Un código de curso para dispositivos propios queda como mejora futura.
+2. **Clasificador de ánimo (RF-21).** Por ahora usa el modelo de Ollama con
+   salida de tres categorías; el v1.1 pide un clasificador ligero en español.
+3. **Modelo para validar la macro.** Solo hay `qwen3:14b` y `gemma3:12b` en la
+   VM-IA; falta medir si cumplen 15 s en el percentil 95 (RNF-01).
+
+## Pruebas
+
+- **Unitarias** (sin base ni IA): `pytest -m "not integracion"`.
+- **Integración**: PostgreSQL desechable en la VM-APP con `schema.sql`
+  cargado, nunca contra la base real.

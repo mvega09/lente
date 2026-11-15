@@ -15,6 +15,7 @@ nav:
   - Arquitectura: arquitectura.md
   - API: api.md
   - Worker de IA: worker.md
+  - Hoja de ruta: hoja-de-ruta.md
 
 markdown_extensions:
   - admonition
