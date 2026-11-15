@@ -49,7 +49,9 @@ integración contra una base de pruebas con `schema.sql`.
    cumple con 1 estudiante (p95 14,2 s). Con `OLLAMA_NUM_PARALLEL=4` (activado)
    atiende ≈ 10 por minuto: 5 a la vez ≈ 38 s, 20 a la vez ≈ 2 min. Cumplir
    15 s con 5 o 20 simultáneos requiere GPU. Falta validar su calidad con el
-   docente (≥ 70 %).
+   docente (≥ 70 %): la hoja se genera con `python -m scripts.validacion_docente`
+   (24 casos ficticios en `scripts/casos_validacion.json`; el docente califica
+   a ciegas y la hoja calcula el acuerdo).
 
 ## Pruebas
 
