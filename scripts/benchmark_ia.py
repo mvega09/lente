@@ -107,14 +107,44 @@ def medir(modelo: str, repeticiones: int, simultaneos: int) -> dict:
     }
 
 
+def medir_preparacion(modelo: str) -> dict:
+    """RF-09: preparación del paquete (segundo plano, sin límite de 15 s)."""
+    from worker.modelos import PreparacionTexto
+
+    cliente = Client(host=get_settings().ollama_url, timeout=1800)
+    inicio = time.perf_counter()
+    r = cliente.chat(model=modelo, messages=prompts.mensajes_preparar_texto("Parque central", NOTICIA),
+                     format=PreparacionTexto.model_json_schema(), think=False, keep_alive="30m",
+                     options={"temperature": 0, "num_predict": 2000})
+    segundos = round(time.perf_counter() - inicio, 1)
+    salida = {"modelo": modelo, "segundos": segundos, "tokens_salida": getattr(r, "eval_count", None),
+              "generar_s": round((getattr(r, "eval_duration", 0) or 0) / 1e9, 1)}
+    try:
+        p = PreparacionTexto.model_validate_json(r.message.content)
+    except Exception as e:  # noqa: BLE001
+        return salida | {"json_valido": False, "error": str(e)[:200]}
+    en_texto = [w.palabra for w in p.palabras_cargadas if w.palabra in NOTICIA]
+    return salida | {
+        "json_valido": True,
+        "idea_principal": p.idea_principal,
+        "elementos_clave": p.elementos_clave,
+        "preguntas": len(p.preguntas),
+        "preguntas_validas": sum(1 <= q.correcta <= len(q.opciones) for q in p.preguntas),
+        "palabras": [w.palabra for w in p.palabras_cargadas],
+        "palabras_en_texto_pct": round(100 * len(en_texto) / max(1, len(p.palabras_cargadas))),
+    }
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--modelos", nargs="+", default=["qwen3:14b"])
     ap.add_argument("--repeticiones", type=int, default=3)
     ap.add_argument("--simultaneos", type=int, default=1)
+    ap.add_argument("--preparar", action="store_true", help="Medir la preparación de un texto (RF-09)")
     args = ap.parse_args()
     for modelo in args.modelos:
-        print(json.dumps(medir(modelo, args.repeticiones, args.simultaneos), ensure_ascii=False), flush=True)
+        resultado = medir_preparacion(modelo) if args.preparar else medir(modelo, args.repeticiones, args.simultaneos)
+        print(json.dumps(resultado, ensure_ascii=False), flush=True)
 
 
 if __name__ == "__main__":
