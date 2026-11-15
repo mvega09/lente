@@ -12,11 +12,17 @@ SISTEMA = (
 )
 
 
+def sistema(instrucciones: str | None = None) -> str:
+    """Mensaje de sistema: base fija + instrucciones editables desde la tabla ajustes (RNF-08)."""
+    return f"{SISTEMA}\n\n{instrucciones.strip()}" if instrucciones and instrucciones.strip() else SISTEMA
+
+
 def mensajes_revisar_idea(texto: str, idea_principal: str, elementos_clave: list[str],
-                          nivel_escolar: str | None, respuesta: str) -> list[dict]:
+                          nivel_escolar: str | None, respuesta: str,
+                          instrucciones: str | None = None) -> list[dict]:
     claves = "\n".join(f"- {e}" for e in elementos_clave) or "- (no definidos)"
     return [
-        {"role": "system", "content": SISTEMA},
+        {"role": "system", "content": sistema(instrucciones)},
         {"role": "user", "content": (
             f"NOTICIA:\n{texto}\n\n"
             f"IDEA PRINCIPAL ESPERADA (aprobada por el profesor):\n{idea_principal}\n\n"
@@ -31,9 +37,9 @@ def mensajes_revisar_idea(texto: str, idea_principal: str, elementos_clave: list
     ]
 
 
-def mensajes_preparar_texto(titulo: str, cuerpo: str) -> list[dict]:
+def mensajes_preparar_texto(titulo: str, cuerpo: str, instrucciones: str | None = None) -> list[dict]:
     return [
-        {"role": "system", "content": SISTEMA},
+        {"role": "system", "content": sistema(instrucciones)},
         {"role": "user", "content": (
             f"TÍTULO: {titulo}\n\nNOTICIA:\n{cuerpo}\n\n"
             "Prepara el material para que el profesor lo revise:\n"

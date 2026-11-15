@@ -43,6 +43,13 @@ async def get_conn() -> AsyncIterator[AsyncConnection]:
         yield conn
 
 
+async def ejecutar(conn: AsyncConnection, sql: str, params: Any = None) -> int:
+    """Ejecuta una sentencia sin RETURNING y devuelve cuántas filas afectó."""
+    async with conn.cursor() as cur:
+        await cur.execute(sql, params)
+        return cur.rowcount
+
+
 async def uno(conn: AsyncConnection, sql: str, params: Any = None) -> dict | None:
     """Ejecuta una consulta y devuelve la primera fila (o None)."""
     async with conn.cursor() as cur:

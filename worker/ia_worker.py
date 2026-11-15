@@ -52,17 +52,25 @@ def preguntar(modelo: str, mensajes: list[dict], esquema: type[M], num_predict: 
     return esquema.model_validate_json(r.message.content)
 
 
+def ajuste(conn: psycopg.Connection, clave: str) -> str | None:
+    """Lee un ajuste general como texto (RNF-08: modelo y prompts sin tocar código)."""
+    fila = conn.execute("SELECT ajuste(%s) #>> '{}' AS valor", (clave,)).fetchone()
+    return fila["valor"] if fila and fila["valor"] else None
+
+
 # ---------------------------------------------------------------- tareas
 
 def revisar_idea(conn: psycopg.Connection, trabajo_id: int) -> None:
     d = conn.execute("SELECT * FROM ia_ideas WHERE trabajo_id = %s", (trabajo_id,)).fetchone()
     if d is None:
         raise ValueError("No se encontraron datos para la revisión")
+    modelo = ajuste(conn, "ia_modelo_validacion") or settings.ollama_modelo_validacion
+    instrucciones = ajuste(conn, "ia_instrucciones_revisar")
     inicio = time.perf_counter()
     rev = preguntar(
-        settings.ollama_modelo_validacion,
+        modelo,
         prompts.mensajes_revisar_idea(d["texto"], d["idea_principal"], d["elementos_clave"],
-                                      d["nivel_escolar"], d["respuesta_estudiante"]),
+                                      d["nivel_escolar"], d["respuesta_estudiante"], instrucciones),
         RevisionIdea,
         num_predict=250,
     )
@@ -80,8 +88,8 @@ def preparar_texto(conn: psycopg.Connection, trabajo_id: int) -> None:
     if d is None or not d["cuerpo"]:
         raise ValueError("El texto no tiene cuerpo para preparar")
     prep = preguntar(
-        settings.ollama_modelo_preparacion,
-        prompts.mensajes_preparar_texto(d["titulo"], d["cuerpo"]),
+        ajuste(conn, "ia_modelo") or settings.ollama_modelo_preparacion,
+        prompts.mensajes_preparar_texto(d["titulo"], d["cuerpo"], ajuste(conn, "ia_instrucciones_preparar")),
         PreparacionTexto,
         num_predict=2000,
     )

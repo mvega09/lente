@@ -26,6 +26,8 @@ class _CursorFalso:
     async def __aexit__(self, *exc):
         return False
 
+    rowcount = 1
+
     async def execute(self, sql, params=None):
         self.c.consultas.append((sql, params))
 

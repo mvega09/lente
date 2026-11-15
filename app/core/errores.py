@@ -20,6 +20,27 @@ class NoEncontrado(Exception):
         self.mensaje = f"{que} no existe"
 
 
+class Conflicto(Exception):
+    """La operación no se puede hacer en el estado actual del recurso (409)."""
+
+    def __init__(self, mensaje: str):
+        self.mensaje = mensaje
+
+
+class DatoInvalido(Exception):
+    """Un dato no es coherente con el texto o con otros datos (422)."""
+
+    def __init__(self, mensaje: str):
+        self.mensaje = mensaje
+
+
+# Mensajes claros para las restricciones CHECK del esquema
+MENSAJES_CHECK = {
+    "aprobar_requiere_idea_principal": "Para aprobar el texto falta la idea principal (respuesta esperada)",
+    "forma_de_la_respuesta": "La respuesta no tiene los datos que pide este paso",
+}
+
+
 def _json(status: int, detalle: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"detail": detalle})
 
@@ -28,6 +49,14 @@ def registrar(app: FastAPI) -> None:
     @app.exception_handler(NoEncontrado)
     async def _no_encontrado(_: Request, e: NoEncontrado):
         return _json(404, e.mensaje)
+
+    @app.exception_handler(Conflicto)
+    async def _conflicto(_: Request, e: Conflicto):
+        return _json(409, e.mensaje)
+
+    @app.exception_handler(DatoInvalido)
+    async def _invalido(_: Request, e: DatoInvalido):
+        return _json(422, e.mensaje)
 
     @app.exception_handler(errors.UniqueViolation)
     async def _duplicado(_: Request, e: errors.UniqueViolation):
@@ -40,7 +69,8 @@ def registrar(app: FastAPI) -> None:
     @app.exception_handler(errors.CheckViolation)
     async def _regla(_: Request, e: errors.CheckViolation):
         log.info("CheckViolation: %s", e.diag.constraint_name)
-        return _json(422, "Algún dato no cumple las reglas del sistema")
+        return _json(422, MENSAJES_CHECK.get(e.diag.constraint_name or "",
+                                             "Algún dato no cumple las reglas del sistema"))
 
     @app.exception_handler(errors.RaiseException)
     async def _negocio(_: Request, e: errors.RaiseException):
