@@ -16,6 +16,7 @@ nav:
   - API: api.md
   - Worker de IA: worker.md
   - Hoja de ruta: hoja-de-ruta.md
+  - Tiempos de la IA: benchmark-ia.md
 
 markdown_extensions:
   - admonition

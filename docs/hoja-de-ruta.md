@@ -44,11 +44,15 @@ integración contra una base de pruebas con `schema.sql`.
    Un código de curso para dispositivos propios queda como mejora futura.
 2. **Clasificador de ánimo (RF-21).** Por ahora usa el modelo de Ollama con
    salida de tres categorías; el v1.1 pide un clasificador ligero en español.
-3. **Modelo para validar la macro.** Solo hay `qwen3:14b` y `gemma3:12b` en la
-   VM-IA; falta medir si cumplen 15 s en el percentil 95 (RNF-01).
+3. **Modelo para validar la macro.** Medido (ver [Tiempos de la IA](benchmark-ia.md)):
+   `qwen3:14b` y `gemma3:12b` tardan ≈ 60 s; `qwen3:4b` con respuesta acotada
+   cumple con 1 estudiante (p95 14,2 s) pero no con 5 simultáneos. Falta
+   validar su calidad con el docente (≥ 70 %) y probar `OLLAMA_NUM_PARALLEL`.
 
 ## Pruebas
 
-- **Unitarias** (sin base ni IA): `pytest -m "not integracion"`.
-- **Integración**: PostgreSQL desechable en la VM-APP con `schema.sql`
-  cargado, nunca contra la base real.
+- **Unitarias** (sin base ni IA): `pytest`. Usan una conexión falsa y
+  validan la sintaxis de todo el SQL con el analizador de PostgreSQL (pglast).
+- **Integración** (pendiente): una base de pruebas `lente_pruebas` en la VM-BD
+  con `schema.sql` cargado, nunca contra la base real.
+- **IA**: `python -m scripts.benchmark_ia` contra la VM-IA.

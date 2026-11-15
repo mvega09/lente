@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # Ollama
     ollama_url: str = "http://localhost:11434"
-    ollama_modelo_validacion: str = "qwen3:8b"
+    ollama_modelo_validacion: str = "qwen3:4b"     # cumple RNF-01 con 1 estudiante (docs/benchmark-ia.md)
     ollama_modelo_preparacion: str = "qwen3:14b"
     ollama_keep_alive: str = "30m"
     # Límite duro por solicitud: si Ollama no responde, el trabajo se reporta y se reintenta
