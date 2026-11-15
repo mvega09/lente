@@ -45,6 +45,21 @@ Ollama atiende las solicitudes una tras otra (`OLLAMA_NUM_PARALLEL` sin
 definir): cada una tarda lo mismo, pero hacen fila. Con 20 estudiantes el
 último esperaría ≈ 4,5 min.
 
+## Preparación de un texto (RF-09, qwen3:14b)
+
+```bash
+python -m scripts.benchmark_ia --modelos qwen3:14b --preparar
+```
+
+| Tiempo | Tokens generados | JSON válido | Preguntas válidas | Palabras que existen en el texto |
+|---|---|---|---|---|
+| 268,7 s (≈ 4,5 min) | 628 | Sí | 3 de 3 | 4 de 4 (100 %) |
+
+La idea principal propuesta fue correcta y las palabras cargadas detectadas
+fueron «polémico», «asfixia», «celebraron» y «denunció». Como nadie espera
+esta tarea (el texto queda «preparando» y el profesor lo revisa después),
+cumple RF-09; el límite del worker para preparar es de 15 min.
+
 ## Recomendaciones (en orden)
 
 1. **Usar `qwen3:4b` para validar** la idea principal y dejar `qwen3:14b`

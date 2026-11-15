@@ -51,8 +51,12 @@ integración contra una base de pruebas con `schema.sql`.
 
 ## Pruebas
 
-- **Unitarias** (sin base ni IA): `pytest`. Usan una conexión falsa y
-  validan la sintaxis de todo el SQL con el analizador de PostgreSQL (pglast).
-- **Integración** (pendiente): una base de pruebas `lente_pruebas` en la VM-BD
-  con `schema.sql` cargado, nunca contra la base real.
-- **IA**: `python -m scripts.benchmark_ia` contra la VM-IA.
+- **Unitarias** (sin base ni IA): `pytest`. Usan una conexión falsa, validan
+  la sintaxis de todo el SQL con el analizador de PostgreSQL (pglast) y
+  comprueban que cada columna usada exista en `db/schema.sql`.
+- **Integración** (listas, sin ejecutar): flujo completo y aislamiento entre
+  profesores contra `lente_pruebas`. Crear la base con
+  `deploy/crear_base_pruebas.sh` (no cambia las contraseñas de la base real) y
+  correr con `LENTE_PRUEBAS_INTEGRACION=1 pytest -m integracion`.
+- **IA**: `python -m scripts.benchmark_ia` contra la VM-IA
+  (resultados en [Tiempos de la IA](benchmark-ia.md)).
