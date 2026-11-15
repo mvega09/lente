@@ -5,7 +5,9 @@ from fastapi import APIRouter, status
 from app.core.deps import Admin, Conn
 from app.schemas.admin import ClaveTemporal, ProfesorCambios, ProfesorNuevo, ProfesorSalida, ResumenAdmin
 from app.schemas.cursos import EstudianteAdmin
+from app.schemas.seguimiento import Ajuste, NuevoValor
 from app.services import admin_service as svc
+from app.services import ajustes_service
 
 router = APIRouter(prefix="/admin", tags=["administración"])
 
@@ -46,3 +48,14 @@ async def restablecer_clave(profesor_id: int, datos: ClaveTemporal, _: Admin, co
 @router.get("/estudiantes", response_model=list[EstudianteAdmin], summary="Estudiantes registrados (RF-04)")
 async def listar_estudiantes(_: Admin, conn: Conn):
     return await svc.listar_estudiantes(conn)
+
+
+@router.get("/ajustes", response_model=list[Ajuste], summary="Valores generales: puntos, umbrales, modelo y prompts")
+async def ajustes(_: Admin, conn: Conn):
+    return await ajustes_service.generales(conn)
+
+
+@router.put("/ajustes/{clave}", response_model=list[Ajuste],
+            summary="Cambiar un valor general sin tocar código (RNF-08)")
+async def guardar_ajuste(clave: str, datos: NuevoValor, yo: Admin, conn: Conn):
+    return await ajustes_service.guardar_general(conn, yo.id, clave, datos.valor)

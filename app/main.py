@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core import errores
 from app.core.db import abrir_pool, cerrar_pool
-from app.routers import actividades, admin, auth, cursos, salud, textos
+from app.routers import actividades, admin, auth, cursos, salud, seguimiento, textos
 
 
 @asynccontextmanager
@@ -47,6 +47,7 @@ app.include_router(admin.router)
 app.include_router(cursos.router)
 app.include_router(textos.router)
 app.include_router(actividades.router)
+app.include_router(seguimiento.router)
 
 
 @app.get("/", tags=["salud"], summary="Información básica de la API")
