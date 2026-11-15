@@ -55,5 +55,7 @@ def entrar(api, usuario: str, clave: str) -> dict:
 
 @pytest.fixture(scope="session")
 def admin(api):
-    clave = os.getenv("LENTE_PRUEBAS_ADMIN_CLAVE", "um2027")    # clave inicial de schema.sql
+    clave = os.getenv("LENTE_PRUEBAS_ADMIN_CLAVE")      # clave del admin en la base de pruebas
+    if not clave:
+        pytest.skip("Defina LENTE_PRUEBAS_ADMIN_CLAVE con la clave del administrador de lente_pruebas")
     return entrar(api, os.getenv("LENTE_PRUEBAS_ADMIN_USUARIO", "admin"), clave)
