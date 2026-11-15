@@ -10,8 +10,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.core import errores
 from app.core.db import abrir_pool, cerrar_pool
-from app.routers import auth, salud
+from app.routers import admin, auth, cursos, salud
 
 
 @asynccontextmanager
@@ -38,8 +39,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+errores.registrar(app)
+
 app.include_router(salud.router)
 app.include_router(auth.router)
+app.include_router(admin.router)
+app.include_router(cursos.router)
 
 
 @app.get("/", tags=["salud"], summary="Información básica de la API")

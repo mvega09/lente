@@ -2,10 +2,12 @@
 
 Cada petición toma una conexión del pool. Al salir del bloque sin errores
 se hace COMMIT automáticamente; si hay una excepción, ROLLBACK.
-Use SIEMPRE consultas parametrizadas (%s), nunca f-strings con datos del usuario.
+Use SIEMPRE consultas parametrizadas (%s / %(nombre)s), nunca f-strings con
+datos del usuario.
 """
 
 from collections.abc import AsyncIterator
+from typing import Any
 
 from psycopg import AsyncConnection
 from psycopg.rows import dict_row
@@ -39,3 +41,17 @@ async def get_conn() -> AsyncIterator[AsyncConnection]:
         raise RuntimeError("El pool de base de datos no está abierto")
     async with _pool.connection() as conn:
         yield conn
+
+
+async def uno(conn: AsyncConnection, sql: str, params: Any = None) -> dict | None:
+    """Ejecuta una consulta y devuelve la primera fila (o None)."""
+    async with conn.cursor() as cur:
+        await cur.execute(sql, params)
+        return await cur.fetchone()
+
+
+async def varios(conn: AsyncConnection, sql: str, params: Any = None) -> list[dict]:
+    """Ejecuta una consulta y devuelve todas las filas."""
+    async with conn.cursor() as cur:
+        await cur.execute(sql, params)
+        return await cur.fetchall()
