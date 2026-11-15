@@ -46,8 +46,10 @@ integración contra una base de pruebas con `schema.sql`.
    salida de tres categorías; el v1.1 pide un clasificador ligero en español.
 3. **Modelo para validar la macro.** Medido (ver [Tiempos de la IA](benchmark-ia.md)):
    `qwen3:14b` y `gemma3:12b` tardan ≈ 60 s; `qwen3:4b` con respuesta acotada
-   cumple con 1 estudiante (p95 14,2 s) pero no con 5 simultáneos. Falta
-   validar su calidad con el docente (≥ 70 %) y probar `OLLAMA_NUM_PARALLEL`.
+   cumple con 1 estudiante (p95 14,2 s). Con `OLLAMA_NUM_PARALLEL=4` (activado)
+   atiende ≈ 10 por minuto: 5 a la vez ≈ 38 s, 20 a la vez ≈ 2 min. Cumplir
+   15 s con 5 o 20 simultáneos requiere GPU. Falta validar su calidad con el
+   docente (≥ 70 %).
 
 ## Pruebas
 

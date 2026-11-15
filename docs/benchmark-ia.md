@@ -45,6 +45,48 @@ Ollama atiende las solicitudes una tras otra (`OLLAMA_NUM_PARALLEL` sin
 definir): cada una tarda lo mismo, pero hacen fila. Con 20 estudiantes el
 último esperaría ≈ 4,5 min.
 
+## Con generación en paralelo (`OLLAMA_NUM_PARALLEL=4`)
+
+Activado el 15 de noviembre de 2026 en la VM-IA
+(`/etc/systemd/system/ollama.service.d/paralelo.conf`). Ollama genera hasta 4
+respuestas a la vez; cada una sale más lenta, pero el total sube.
+
+| Estudiantes a la vez | Tiempos (s) | Máximo | ¿Cumple 15 s? |
+|---|---|---|---|
+| 1 | 11,2 · 12,2 · 12,3 · 12,8 · 13,8 | 13,8 s | Sí |
+| 2 | 17,5 · 17,8 | 17,8 s | No (por poco) |
+| 5 | 25,0 · 25,2 · 26,1 · 26,3 · 37,9 | 37,9 s | No |
+| 10 | 22,9 … 27,2 · 47,8 … 51,0 · 71,3 · 72,4 | 72,4 s | No |
+| 20 | 22,8 … 26,2 · 46,4 … 51,0 · 71,7 … 74,9 · 94,8 … 99,1 · 118,8 … 121,3 | 121,3 s | No |
+
+- Las solicitudes salen en **grupos de 4 cada ≈ 24 s**: el rendimiento pasó de
+  1 respuesta cada ≈ 13 s (en fila) a **1 cada ≈ 6 s (≈ 10 por minuto)**.
+  Con 20 estudiantes el último espera ≈ 2 min en lugar de ≈ 4,5 min.
+- Regla práctica: espera máxima ≈ **24 s × (estudiantes a la vez ÷ 4, redondeado
+  hacia arriba)**.
+- La primera vez que se usan los 4 espacios hay que leer la noticia en cada uno
+  (en una medición en frío, 5 a la vez tardaron hasta 69 s). Después la noticia
+  queda en caché; por eso conviene que el curso trabaje sobre el mismo texto.
+- JSON válido y cita encontrada en el texto: 100 % en todas las mediciones.
+- Si se prepara un texto con `qwen3:14b` al mismo tiempo, compite por la CPU:
+  conviene preparar textos fuera de la clase.
+
+**Conclusión:** con esta VM (solo CPU) RNF-01 se cumple con 1 validación a la
+vez. Para 5 o 20 simultáneos dentro de 15 s se necesita GPU (ver recomendación 4).
+
+### Capacidad recomendada con el hardware actual
+
+| Situación | Espera de la idea principal |
+|---|---|
+| Envíos escalonados (lo normal: cada estudiante lee a su ritmo) | ≈ 12–25 s |
+| Hasta 4 envíos al mismo tiempo | ≈ 25 s |
+| 10 al mismo tiempo | ≈ 1 min el último |
+| 20 al mismo tiempo | ≈ 2 min el último |
+| 30 al mismo tiempo | ≈ 3 min el último |
+
+La API y la base no son el límite (atienden cientos de estudiantes conectados);
+el límite es solo la validación con IA, que procesa ≈ 10 respuestas por minuto.
+
 ## Preparación de un texto (RF-09, qwen3:14b)
 
 ```bash
@@ -66,15 +108,12 @@ cumple RF-09; el límite del worker para preparar es de 15 min.
    para preparar textos (nadie espera). Ya es el valor por defecto
    (`OLLAMA_MODELO_VALIDACION`, o el ajuste `ia_modelo_validacion`).
    Falta validar la calidad: el v1.1 pide ≥ 70 % de acuerdo con el docente.
-2. **Probar generación en paralelo** en la VM-IA (requiere root). En CPU,
-   generar varias respuestas a la vez suele aumentar el rendimiento total:
+2. **Generación en paralelo: activada** (`OLLAMA_NUM_PARALLEL=4`, ver arriba).
+   Correr 4 copias del worker para aprovecharla (la cola usa
+   `FOR UPDATE SKIP LOCKED` y atiende primero la prioridad 1):
    ```bash
-   sudo systemctl edit ollama   # agregar en [Service]:
-   # Environment="OLLAMA_NUM_PARALLEL=4"
-   sudo systemctl restart ollama
+   sudo systemctl enable --now lente-worker@{1..4}
    ```
-   y correr 4 workers (la cola usa `FOR UPDATE SKIP LOCKED`). Luego repetir
-   la medición con `--simultaneos 5` y `--simultaneos 20`.
 3. **En el aula**, el profesor puede escalonar el envío de la idea principal
    por grupos; mientras tanto el estudiante ve «analizando» y la API avisa
    si se pasa del tiempo máximo.

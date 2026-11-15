@@ -1,7 +1,9 @@
+# Plantilla: permite correr varias copias del worker (una por espacio de Ollama).
 # Copiar a /etc/systemd/system/ y ejecutar:
-#   sudo systemctl daemon-reload && sudo systemctl enable --now lente-worker
+#   sudo systemctl daemon-reload && sudo systemctl enable --now lente-worker@{1..4}
+# Usar tantas copias como OLLAMA_NUM_PARALLEL en la VM-IA (hoy 4).
 [Unit]
-Description=LENTE worker de IA (Ollama)
+Description=LENTE worker de IA (Ollama) - copia %i
 After=network-online.target
 
 [Service]
