@@ -1,0 +1,38 @@
+# Corre las pruebas unitarias en cada push y pull request.
+# No usa base de datos ni IA: las pruebas de integración se saltan solas
+# (necesitan LENTE_PRUEBAS_INTEGRACION=1 y una base lente_pruebas).
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Pruebas unitarias
+        run: python -m pytest -q -p no:cacheprovider
+
+      - name: Documentación (mkdocs --strict)
+        run: mkdocs build --strict --site-dir /tmp/sitio

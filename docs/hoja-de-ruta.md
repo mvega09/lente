@@ -38,10 +38,10 @@ integración contra una base de pruebas con `schema.sql`.
 
 ## Decisiones abiertas (para el equipo)
 
-1. **Cómo entra el estudiante sin cuenta.** El v1.1 dice que no inicia sesión.
-   Propuesta inicial: el profesor abre la actividad para un estudiante desde su
-   sesión (modo aula / videobeam) y el estudiante responde en ese dispositivo.
-   Un código de curso para dispositivos propios queda como mejora futura.
+1. **Cómo entra el estudiante sin cuenta. Decidido (15-nov-2026):** solo el
+   profesor tiene acceso a la plataforma. El profesor abre la actividad para un
+   estudiante desde su sesión (modo aula / videobeam) y el estudiante responde
+   en ese dispositivo. No se crean cuentas ni códigos para estudiantes.
 2. **Clasificador de ánimo (RF-21).** Por ahora usa el modelo de Ollama con
    salida de tres categorías; el v1.1 pide un clasificador ligero en español.
 3. **Modelo para validar la macro.** Medido (ver [Tiempos de la IA](benchmark-ia.md)):
