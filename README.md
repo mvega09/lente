@@ -204,6 +204,7 @@ Cumplir 15 s con muchos estudiantes simultáneos requiere GPU; la hoja de ruta l
 | Endpoints interactivos | `http://10.60.14.182:8000/docs` |
 | Todos los endpoints en texto | [`docs/api.md`](docs/api.md) |
 | Arquitectura | [`docs/arquitectura.md`](docs/arquitectura.md) |
+| Contexto para el frontend y asistentes de IA | [`docs/frontend/CLAUDE.md`](docs/frontend/CLAUDE.md) |
 | Instalación detallada | [`docs/instalacion.md`](docs/instalacion.md) |
 | Worker de IA | [`docs/worker.md`](docs/worker.md) |
 | Hoja de ruta y decisiones | [`docs/hoja-de-ruta.md`](docs/hoja-de-ruta.md) |
