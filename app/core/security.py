@@ -23,6 +23,9 @@ def crear_token(usuario: UsuarioSesion) -> str:
         "sub": str(usuario.id),
         "rol": usuario.rol,
         "nombre": usuario.nombre,
+        # Para que /auth/yo diga si falta cambiar la clave (el frontend muestra el aviso).
+        # Tras cambiarla, el aviso desaparece al iniciar sesión de nuevo.
+        "debe_cambiar_clave": usuario.debe_cambiar_clave,
         "iat": ahora,
         "exp": ahora + timedelta(minutes=s.jwt_minutos),
     }
@@ -44,7 +47,8 @@ def usuario_actual(
         datos = jwt.decode(cred.credentials, s.jwt_secreto, algorithms=[s.jwt_algoritmo])
     except jwt.PyJWTError:
         raise no_autorizado
-    return UsuarioSesion(id=int(datos["sub"]), rol=datos["rol"], nombre=datos["nombre"])
+    return UsuarioSesion(id=int(datos["sub"]), rol=datos["rol"], nombre=datos["nombre"],
+                         debe_cambiar_clave=bool(datos.get("debe_cambiar_clave", False)))
 
 
 def requiere_rol(*roles: str):
