@@ -29,9 +29,11 @@ def mensajes_revisar_idea(texto: str, idea_principal: str, elementos_clave: list
             f"ELEMENTOS CLAVE QUE DEBE MENCIONAR:\n{claves}\n\n"
             "Compara la idea principal escrita por el estudiante con la esperada.\n"
             "- veredicto: 'coincide', 'coincide_en_parte' o 'por_mejorar'.\n"
-            "- faltantes: elementos clave que no mencionó (vacío si no falta nada).\n"
-            f"- explicacion: una o dos frases para un estudiante de nivel {nivel_escolar or 'escolar'}.\n"
-            "- cita: un fragmento corto copiado EXACTAMENTE de la noticia que respalde tu explicación.\n\n"
+            "- faltantes: elementos clave que no mencionó, en pocas palabras (vacío si no falta nada).\n"
+            f"- explicacion: UNA frase corta (máximo 25 palabras) para un estudiante de nivel "
+            f"{nivel_escolar or 'escolar'}.\n"
+            "- cita: un fragmento corto (máximo 15 palabras) copiado EXACTAMENTE de la noticia.\n"
+            "Sé breve: el estudiante está esperando.\n\n"
             f"IDEA PRINCIPAL DEL ESTUDIANTE:\n{respuesta}"
         )},
     ]

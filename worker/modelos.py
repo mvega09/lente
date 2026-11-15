@@ -10,12 +10,17 @@ from pydantic import BaseModel, Field
 
 
 class RevisionIdea(BaseModel):
-    """RNF-04: veredicto, elementos faltantes, justificación y cita del texto."""
+    """RNF-04: veredicto, elementos faltantes, justificación y cita del texto.
+
+    Los límites de longitud (que Ollama aplica como gramática) mantienen la
+    respuesta corta: en CPU el tiempo lo domina la cantidad de tokens que se
+    generan, y el estudiante está esperando (RNF-01).
+    """
 
     veredicto: Literal["coincide", "coincide_en_parte", "por_mejorar"]
-    faltantes: str = Field(description="Elementos clave que no mencionó el estudiante; vacío si no falta nada")
-    explicacion: str = Field(description="Una o dos frases para el estudiante, adecuadas a su nivel escolar")
-    cita: str = Field(description="Fragmento copiado TEXTUALMENTE de la noticia que respalda la explicación")
+    faltantes: str = Field(max_length=100, description="Elementos clave que faltaron, muy breve; vacío si no falta nada")
+    explicacion: str = Field(max_length=160, description="Una frase corta para el estudiante, adecuada a su nivel")
+    cita: str = Field(max_length=120, description="Fragmento corto copiado TEXTUALMENTE de la noticia")
 
 
 class Animo(BaseModel):
