@@ -19,19 +19,22 @@ Basada en el *Levantamiento de requerimientos v1.1 (IA)*, el esquema
 
 | # | Módulo | Requisitos | Endpoints principales | Estado |
 |---|---|---|---|---|
-| 1 | Sesión | RF-01 | `POST /auth/login`, `GET /auth/yo`, `POST /auth/cambiar-clave` | Login listo |
-| 2 | Administración | RF-02, RF-04 | `/admin/profesores`, `/admin/resumen` | Pendiente |
-| 3 | Cursos y estudiantes | RF-03, RF-05, RF-20 | `/cursos`, `/cursos/{id}/estudiantes`, `/estudiantes/{id}` | Pendiente |
-| 4 | Biblioteca de textos | RF-09 | `/textos`, `/textos/{id}/preparar`, `/textos/{id}/aprobar`, preguntas y palabras | Pendiente |
-| 5 | Activación en curso | RF-09 | `/cursos/{id}/textos` | Pendiente |
+| 1 | Sesión | RF-01 | `POST /auth/login`, `GET /auth/yo`, `POST /auth/cambiar-clave` | Hecho* |
+| 2 | Administración | RF-02, RF-04 | `/admin/profesores`, `/admin/resumen`, `/admin/estudiantes` | Hecho* |
+| 3 | Cursos y estudiantes | RF-03, RF-05, RF-20 | `/cursos`, `/cursos/{id}/estudiantes`, `/estudiantes/{id}` | Hecho* |
+| 4 | Biblioteca de textos | RF-09, RF-11, RF-12 | `/textos`, `/preparar`, `/aprobar`, `/revisar`, `/paquete`, preguntas y palabras | Hecho* |
+| 5 | Activación en curso | RF-09 | `/cursos/{id}/textos` | Hecho* |
 | 6 | Actividad del estudiante | RF-10, RF-11, RF-12, RF-15, RNF-03 | `/actividades`, `/actividades/{id}/macro|super|micro`, `/actividades/{id}/terminar` | Pendiente |
 | 7 | Resultado | RF-16, RF-17 | `/actividades/{id}/resultado` | Pendiente |
 | 8 | Progreso y estadísticas | RF-06, RF-07, RF-08 | `/estudiantes/{id}/progreso`, `/historial` | Pendiente |
-| 9 | Resaltado y explicación | RF-13, RF-14 | `/textos/{id}/resaltados` | Pendiente |
+| 9 | Resaltado y explicación | RF-13, RF-14 | `/textos/{id}/resaltados` | Hecho* |
 | 10 | Gamificación | RF-18 | `/estudiantes/{id}/logros`, `/cursos/{id}/ajustes` | Pendiente |
 | 11 | Adaptación por grado | RF-19 | Campo `nivel_escolar` y dificultad máxima en la actividad | Pendiente |
 | 12 | Panel del docente y ánimo | RF-21 | `/cursos/{id}/panel`, `/alertas` | Pendiente |
-| 13 | Worker de IA | RF-09, RF-10, RF-21 | Proceso `worker.ia_worker` | Primera versión |
+| 13 | Worker de IA | RF-09, RF-10, RF-21, RNF-08 | Proceso `worker.ia_worker` (modelo y prompts desde `ajustes`) | Primera versión |
+
+\* Probado con pruebas unitarias y validación de SQL; falta la prueba de
+integración contra una base de pruebas con `schema.sql`.
 
 ## Decisiones abiertas (para el equipo)
 
