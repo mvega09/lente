@@ -1,0 +1,15 @@
+# Copiar a /etc/systemd/system/ y ejecutar:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now lente-api
+[Unit]
+Description=LENTE API (FastAPI)
+After=network-online.target
+
+[Service]
+User=useria
+WorkingDirectory=/home/useria/lente
+EnvironmentFile=/home/useria/lente/.env
+ExecStart=/home/useria/lente/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

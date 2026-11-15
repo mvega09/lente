@@ -1,0 +1,12 @@
+# API
+fastapi[standard]>=0.115
+psycopg[binary,pool]>=3.2
+pydantic-settings>=2.4
+pyjwt>=2.9
+
+# Worker de IA
+ollama>=0.5
+
+# Documentación y pruebas
+mkdocs-material>=9.5
+pytest>=8.3

@@ -1,0 +1,22 @@
+site_name: LENTE · Documentación del backend
+site_description: Backend en FastAPI de la herramienta de alfabetización mediática basada en Van Dijk
+docs_dir: docs
+
+theme:
+  name: material
+  language: es
+  features:
+    - navigation.sections
+    - content.code.copy
+
+nav:
+  - Inicio: index.md
+  - Instalación: instalacion.md
+  - Arquitectura: arquitectura.md
+  - API: api.md
+  - Worker de IA: worker.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - pymdownx.superfences

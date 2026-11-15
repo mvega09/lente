@@ -1,0 +1,47 @@
+"""Punto de entrada de la API de LENTE.
+
+Desarrollo:  uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+Documentación interactiva: http://<ip>:8000/docs
+"""
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import get_settings
+from app.core.db import abrir_pool, cerrar_pool
+from app.routers import auth, salud
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await abrir_pool()
+    yield
+    await cerrar_pool()
+
+
+settings = get_settings()
+
+app = FastAPI(
+    title=settings.app_nombre,
+    version="0.1.0",
+    description="Backend de LENTE: análisis crítico del discurso (Van Dijk) asistido por IA.",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origenes,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(salud.router)
+app.include_router(auth.router)
+
+
+@app.get("/", tags=["salud"], summary="Información básica de la API")
+def raiz() -> dict:
+    return {"app": settings.app_nombre, "version": app.version, "docs": "/docs"}
