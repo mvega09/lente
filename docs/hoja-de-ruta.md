@@ -26,11 +26,11 @@ Basada en el *Levantamiento de requerimientos v1.1 (IA)*, el esquema
 | 5 | Activación en curso | RF-09 | `/cursos/{id}/textos` | Hecho* |
 | 6 | Actividad del estudiante | RF-10, RF-11, RF-12, RF-15, RNF-03 | `/actividades`, `/actividades/{id}/macro|super|micro`, `/actividades/{id}/terminar` | Hecho* |
 | 7 | Resultado | RF-16, RF-17 | `/actividades/{id}/resultado` | Hecho* |
-| 8 | Progreso y estadísticas | RF-06, RF-07, RF-08 | `/estudiantes/{id}/progreso`, `/historial` | Pendiente |
+| 8 | Progreso y estadísticas | RF-06, RF-07, RF-08 | `/estudiantes/{id}/progreso`, `/estudiantes/{id}/historial` | Hecho* |
 | 9 | Resaltado y explicación | RF-13, RF-14 | `/textos/{id}/resaltados` | Hecho* |
-| 10 | Gamificación | RF-18 | `/estudiantes/{id}/logros`, `/cursos/{id}/ajustes` | Pendiente |
+| 10 | Gamificación | RF-18, RNF-08 | Logros en el progreso, `/cursos/{id}/ajustes`, `/admin/ajustes` | Hecho* |
 | 11 | Adaptación por grado | RF-19 | Instrucciones por nivel escolar y preguntas filtradas por dificultad | Hecho* |
-| 12 | Panel del docente y ánimo | RF-21 | `/cursos/{id}/panel`, `/alertas` | Pendiente |
+| 12 | Panel del docente y ánimo | RF-21 | `/cursos/{id}/panel`, `/alertas` | Hecho* |
 | 13 | Worker de IA | RF-09, RF-10, RF-21, RNF-08 | Proceso `worker.ia_worker` (modelo y prompts desde `ajustes`) | Primera versión |
 
 \* Probado con pruebas unitarias y validación de SQL; falta la prueba de
