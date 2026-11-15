@@ -18,9 +18,9 @@ class RevisionIdea(BaseModel):
     """
 
     veredicto: Literal["coincide", "coincide_en_parte", "por_mejorar"]
-    faltantes: str = Field(max_length=100, description="Elementos clave que faltaron, muy breve; vacío si no falta nada")
-    explicacion: str = Field(max_length=160, description="Una frase corta para el estudiante, adecuada a su nivel")
-    cita: str = Field(max_length=120, description="Fragmento corto copiado TEXTUALMENTE de la noticia")
+    faltantes: str = Field(max_length=80, description="Elementos clave que faltaron, muy breve; vacío si no falta nada")
+    explicacion: str = Field(max_length=120, description="Una frase corta para el estudiante, adecuada a su nivel")
+    cita: str = Field(max_length=90, description="Fragmento corto copiado TEXTUALMENTE de la noticia")
 
 
 class Animo(BaseModel):
