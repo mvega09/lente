@@ -67,6 +67,10 @@ def una_validacion(cliente: Client, modelo: str, respuesta: str) -> dict:
         "segundos": round(segundos, 2),
         "tokens_salida": getattr(r, "eval_count", None),
         "tokens_entrada": getattr(r, "prompt_eval_count", None),
+        # Desglose (Ollama lo da en nanosegundos): leer el prompt vs. generar la respuesta
+        "leer_prompt_s": round((getattr(r, "prompt_eval_duration", 0) or 0) / 1e9, 2),
+        "generar_s": round((getattr(r, "eval_duration", 0) or 0) / 1e9, 2),
+        "carga_s": round((getattr(r, "load_duration", 0) or 0) / 1e9, 2),
         "json_valido": valido,
         "veredicto": veredicto,
         "cita_en_texto": cita_ok,
