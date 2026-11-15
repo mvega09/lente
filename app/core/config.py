@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     ollama_modelo_validacion: str = "qwen3:4b"     # cumple RNF-01 con 1 estudiante (docs/benchmark-ia.md)
     ollama_modelo_preparacion: str = "qwen3:14b"
     ollama_keep_alive: str = "30m"
+    # El modelo de validación queda siempre cargado: cargarlo toma ~30 s y el estudiante
+    # está esperando (en la prueba real, la primera revisión tardó 42 s en frío).
+    ollama_keep_alive_validacion: str = "-1m"
+    ollama_precalentar_cada_s: int = 600
     # Límite duro por solicitud: si Ollama no responde, el trabajo se reporta y se reintenta
     ollama_timeout_revision_s: int = 90
     ollama_timeout_preparacion_s: int = 900

@@ -42,7 +42,7 @@ def _pedir_detener(*_):
 
 
 def preguntar(modelo: str, mensajes: list[dict], esquema: type[M], num_predict: int,
-              cliente: Client | None = None) -> M:
+              cliente: Client | None = None, keep_alive: str | None = None) -> M:
     """Llama a Ollama con salida estructurada y valida el JSON con Pydantic.
 
     Nunca se registra el contenido del prompt (RNF-06): solo ids y tiempos.
@@ -52,7 +52,7 @@ def preguntar(modelo: str, mensajes: list[dict], esquema: type[M], num_predict: 
         messages=mensajes,
         format=esquema.model_json_schema(),
         think=False,                       # Qwen3 sin razonamiento (más rápido)
-        keep_alive=settings.ollama_keep_alive,
+        keep_alive=keep_alive or settings.ollama_keep_alive,
         options={"temperature": 0, "num_predict": num_predict},
     )
     return esquema.model_validate_json(r.message.content)
@@ -64,13 +64,33 @@ def ajuste(conn: psycopg.Connection, clave: str) -> str | None:
     return fila["valor"] if fila and fila["valor"] else None
 
 
+def modelo_validacion(conn: psycopg.Connection) -> str:
+    return ajuste(conn, "ia_modelo_validacion") or settings.ollama_modelo_validacion
+
+
+def precalentar(conn: psycopg.Connection) -> bool:
+    """Carga el modelo de validación en Ollama y lo deja en memoria.
+
+    Una solicitud sin texto solo carga el modelo (si ya está cargado, responde al
+    instante). Si Ollama no responde, el worker sigue: la revisión lo cargará.
+    """
+    modelo = modelo_validacion(conn)
+    try:
+        cliente_revision.generate(model=modelo, prompt="", keep_alive=settings.ollama_keep_alive_validacion)
+        log.info("Modelo %s cargado y listo", modelo)
+        return True
+    except Exception as e:  # noqa: BLE001
+        log.warning("No se pudo precargar %s: %s", modelo, e)
+        return False
+
+
 # ---------------------------------------------------------------- tareas
 
 def revisar_idea(conn: psycopg.Connection, trabajo_id: int) -> None:
     d = conn.execute("SELECT * FROM ia_ideas WHERE trabajo_id = %s", (trabajo_id,)).fetchone()
     if d is None:
         raise ValueError("No se encontraron datos para la revisión")
-    modelo = ajuste(conn, "ia_modelo_validacion") or settings.ollama_modelo_validacion
+    modelo = modelo_validacion(conn)
     instrucciones = ajuste(conn, "ia_instrucciones_revisar")
     inicio = time.perf_counter()
     rev = preguntar(
@@ -79,6 +99,7 @@ def revisar_idea(conn: psycopg.Connection, trabajo_id: int) -> None:
                                       d["nivel_escolar"], d["respuesta_estudiante"], instrucciones),
         RevisionIdea,
         num_predict=250,
+        keep_alive=settings.ollama_keep_alive_validacion,
     )
     ms = int((time.perf_counter() - inicio) * 1000)
     # guardar_revision_idea verifica en la base que la cita exista en el texto
@@ -140,11 +161,12 @@ def analizar_animo(conn: psycopg.Connection, trabajo_id: int) -> None:
     if d is None:
         raise ValueError("No se encontraron datos de la actividad")
     res = preguntar(
-        settings.ollama_modelo_validacion,
+        modelo_validacion(conn),
         prompts.mensajes_analizar_animo(d["respuesta_abierta"], d["resultado_macro"],
                                         d["resultado_super"], d["resultado_micro"], d["segundos"]),
         Animo,
         num_predict=30,
+        keep_alive=settings.ollama_keep_alive_validacion,
     )
     conn.execute("SELECT guardar_animo(%s, %s)", (trabajo_id, res.animo))
     log.info("analizar_animo %s: %s", trabajo_id, res.animo)
@@ -182,8 +204,14 @@ def main() -> None:
     while not _detener:
         try:
             with psycopg.connect(settings.conninfo_ia, autocommit=True, row_factory=dict_row) as conn:
+                precalentar(conn)
+                ultimo_calentamiento = time.monotonic()
                 while not _detener:
                     if not procesar_siguiente(conn):
+                        # Si Ollama se reinició, el modelo vuelve a cargarse antes del próximo estudiante
+                        if time.monotonic() - ultimo_calentamiento > settings.ollama_precalentar_cada_s:
+                            precalentar(conn)
+                            ultimo_calentamiento = time.monotonic()
                         time.sleep(ESPERA_SIN_TRABAJO_S)
         except psycopg.OperationalError:
             log.exception("Sin conexión con PostgreSQL; reintentando en %s s", ESPERA_RECONEXION_S)
