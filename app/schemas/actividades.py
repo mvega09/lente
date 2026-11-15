@@ -56,6 +56,7 @@ class EstadoMacro(BaseModel):
 
     estado_ia: str
     analizando: bool
+    mensaje: str | None = Field(default=None, description="Aviso si tarda más de lo normal o si la IA falló")
     veredicto: str | None = None
     faltantes: str | None = None
     explicacion: str | None = None

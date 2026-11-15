@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     ollama_modelo_validacion: str = "qwen3:8b"
     ollama_modelo_preparacion: str = "qwen3:14b"
     ollama_keep_alive: str = "30m"
+    # Límite duro por solicitud: si Ollama no responde, el trabajo se reporta y se reintenta
+    ollama_timeout_revision_s: int = 90
+    ollama_timeout_preparacion_s: int = 900
 
     def _conninfo(self, usuario: str, clave: str) -> str:
         return make_conninfo(

@@ -24,7 +24,9 @@ from worker.modelos import Animo, PreparacionTexto, RevisionIdea
 
 log = logging.getLogger("lente.worker")
 settings = get_settings()
-ollama = Client(host=settings.ollama_url)
+# Dos clientes: la revisión de la idea tiene un estudiante esperando; la preparación no
+cliente_revision = Client(host=settings.ollama_url, timeout=settings.ollama_timeout_revision_s)
+cliente_preparacion = Client(host=settings.ollama_url, timeout=settings.ollama_timeout_preparacion_s)
 
 ESPERA_SIN_TRABAJO_S = 1.0
 ESPERA_RECONEXION_S = 5.0
@@ -39,9 +41,13 @@ def _pedir_detener(*_):
     log.info("Señal recibida: se detendrá al terminar el trabajo actual")
 
 
-def preguntar(modelo: str, mensajes: list[dict], esquema: type[M], num_predict: int) -> M:
-    """Llama a Ollama con salida estructurada y valida el JSON con Pydantic."""
-    r = ollama.chat(
+def preguntar(modelo: str, mensajes: list[dict], esquema: type[M], num_predict: int,
+              cliente: Client | None = None) -> M:
+    """Llama a Ollama con salida estructurada y valida el JSON con Pydantic.
+
+    Nunca se registra el contenido del prompt (RNF-06): solo ids y tiempos.
+    """
+    r = (cliente or cliente_revision).chat(
         model=modelo,
         messages=mensajes,
         format=esquema.model_json_schema(),
@@ -92,6 +98,7 @@ def preparar_texto(conn: psycopg.Connection, trabajo_id: int) -> None:
         prompts.mensajes_preparar_texto(d["titulo"], d["cuerpo"], ajuste(conn, "ia_instrucciones_preparar")),
         PreparacionTexto,
         num_predict=2000,
+        cliente=cliente_preparacion,
     )
     texto_id, cuerpo = d["texto_id"], d["cuerpo"]
     with conn.transaction():

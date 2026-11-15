@@ -56,6 +56,16 @@ def test_vista_no_expone_la_opcion_correcta(cliente, monkeypatch):
     assert all("correcta" not in q for q in r.json()["preguntas"])
 
 
+def test_aviso_cuando_la_revision_tarda():
+    fila = {"texto": "x", "estado_ia": "procesando", "veredicto_ia": None, "faltantes_ia": None,
+            "explicacion_ia": None, "cita_ia": None, "cita_valida": None, "idea_principal": "R",
+            "segundos_esperando": 40, "tiempo_maximo": 15}
+    salida = asyncio.run(svc.estado_macro(ConexionFalsa(fila), 7, 10))
+    assert "tardando" in salida["mensaje"] and "idea_principal" not in salida
+    rapida = asyncio.run(svc.estado_macro(ConexionFalsa(fila | {"segundos_esperando": 5}), 7, 10))
+    assert "mensaje" not in rapida
+
+
 # ---------------------------------------------------------------- RF-15: secuencia
 
 def test_no_se_salta_pasos():

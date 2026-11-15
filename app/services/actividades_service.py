@@ -100,7 +100,9 @@ DELETE FROM lente.respuestas r USING lente.actividades a
 
 SQL_MACRO = """
 SELECT r.texto, r.estado_ia, r.veredicto_ia, r.faltantes_ia, r.explicacion_ia, r.cita_ia, r.cita_valida,
-       t.idea_principal
+       t.idea_principal,
+       extract(epoch FROM now() - r.recibida_en)::int AS segundos_esperando,
+       coalesce((lente.ajuste('ia_tiempo_maximo_seg', s.curso_id))::int, 15) AS tiempo_maximo
   FROM lente.respuestas r
   JOIN lente.actividades a ON a.id = r.actividad_id
   JOIN lente.textos t ON t.id = a.texto_id
@@ -229,6 +231,11 @@ async def estado_macro(conn: AsyncConnection, profesor_id: int, actividad_id: in
         raise NoEncontrado("La idea principal de esta actividad")
     analizando = r["estado_ia"] in ("pendiente", "procesando")
     salida = {"estado_ia": r["estado_ia"], "analizando": analizando}
+    if analizando and (r.get("segundos_esperando") or 0) > (r.get("tiempo_maximo") or 15):
+        # RNF-01: si se pasa del tiempo máximo se informa al estudiante y la cola reintenta
+        salida["mensaje"] = "La revisión está tardando más de lo normal. Seguimos intentando; no se perdió tu respuesta."
+    if r["estado_ia"] == "fallida":
+        salida["mensaje"] = "No pudimos revisar tu idea con la IA. Compárala con la idea principal del texto."
     if not analizando:
         # Si la cita no existe en el texto, la base ya dejó explicación y cita vacías (RNF-04)
         salida |= {"veredicto": r["veredicto_ia"], "faltantes": r["faltantes_ia"],
