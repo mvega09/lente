@@ -4,6 +4,7 @@
 # Usar tantas copias como OLLAMA_NUM_PARALLEL en la VM-IA (hoy 4).
 [Unit]
 Description=LENTE worker de IA (Ollama) - copia %i
+Wants=network-online.target
 After=network-online.target
 
 [Service]
