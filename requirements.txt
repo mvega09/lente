@@ -11,3 +11,4 @@ ollama>=0.5
 mkdocs-material>=9.5
 pytest>=8.3
 pglast>=7.0          # valida la sintaxis SQL en las pruebas, sin base de datos
+openpyxl>=3.1        # hoja de validación con el docente (scripts/validacion_docente.py)

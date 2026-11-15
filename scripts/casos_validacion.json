@@ -1,0 +1,59 @@
+{
+  "_descripcion": "Casos para validar con el docente la revisión de la idea principal (RF-10, criterio >= 70 % de acuerdo). Noticias y respuestas ficticias, escritas para cubrir respuestas buenas, parciales, pobres, fuera de tema y de opinión.",
+  "noticias": [
+    {
+      "id": "N1",
+      "titulo": "Colegio de La Esperanza recoge una tonelada de reciclaje",
+      "nivel_escolar": "primaria",
+      "texto": "La Esperanza, 10 de mayo. Los estudiantes del colegio La Esperanza recogieron una tonelada de botellas y papel en un mes, gracias a una campaña de reciclaje que empezaron los niños de cuarto grado. Con el dinero de la venta del material, el colegio compró veinte libros nuevos para la biblioteca. La rectora dijo que la campaña «enseñó a los niños que cuidar el planeta también trae cosas buenas». Algunos padres se quejaron porque los niños llegaban a casa pidiendo botellas a todos los vecinos. La empresa de aseo del pueblo prometió recoger el material cada semana para que la campaña continúe el próximo año.",
+      "idea_principal": "Los estudiantes del colegio La Esperanza recogieron una tonelada de reciclaje en un mes y con lo que ganaron compraron libros para la biblioteca.",
+      "elementos_clave": ["campaña de reciclaje de los estudiantes", "una tonelada en un mes", "compraron libros para la biblioteca"],
+      "respuestas": [
+        "Los niños del colegio reciclaron mucho, una tonelada, y con esa plata compraron libros para la biblioteca.",
+        "Los estudiantes hicieron una campaña de reciclaje y recogieron una tonelada de botellas y papel.",
+        "Compraron veinte libros nuevos para la biblioteca del colegio.",
+        "Los padres están bravos porque los niños piden botellas a los vecinos.",
+        "Reciclar es muy importante para cuidar el planeta.",
+        "La noticia habla de un colegio.",
+        "La empresa de aseo va a recoger el reciclaje cada semana.",
+        "Gracias a la campaña de reciclaje que empezó cuarto grado, el colegio juntó una tonelada de material y la vendió para comprar libros."
+      ]
+    },
+    {
+      "id": "N2",
+      "titulo": "Pescadores denuncian que una mina contamina el río Claro",
+      "nivel_escolar": "secundaria",
+      "texto": "Puerto Claro, 22 de agosto. Pescadores del río Claro denunciaron que desde hace tres meses aparecen peces muertos cerca de la mina de oro El Dorado. Según la asociación de pescadores, «el agua bajó turbia y con olor a químicos» y las ventas de pescado cayeron a la mitad. La empresa minera negó cualquier responsabilidad y aseguró que cumple todas las normas ambientales. La autoridad ambiental de la región anunció que tomará muestras del agua la próxima semana y que tendrá resultados en un mes. Mientras tanto, el alcalde pidió a la comunidad no consumir pescado del río hasta conocer los análisis.",
+      "idea_principal": "Pescadores del río Claro denuncian que la mina El Dorado contamina el agua y mata los peces; la empresa lo niega y la autoridad ambiental hará análisis del agua.",
+      "elementos_clave": ["denuncia de los pescadores", "peces muertos cerca de la mina", "la empresa niega la responsabilidad", "la autoridad ambiental analizará el agua"],
+      "respuestas": [
+        "Los pescadores dicen que la mina El Dorado está contaminando el río porque aparecen peces muertos, pero la empresa lo niega y las autoridades van a analizar el agua.",
+        "Los pescadores denuncian que la mina contamina el río Claro y se mueren los peces.",
+        "La mina de oro está matando los peces del río.",
+        "Aparecieron peces muertos en el río y la empresa minera dice que cumple las normas ambientales.",
+        "El alcalde dice que no hay que comer pescado del río.",
+        "Las minas de oro son malas y deberían prohibirlas en todo el país.",
+        "Las ventas de pescado cayeron a la mitad en Puerto Claro.",
+        "Hay un conflicto entre pescadores y una minera por posible contaminación del río; mientras la autoridad ambiental confirma con análisis, se recomienda no comer pescado."
+      ]
+    },
+    {
+      "id": "N3",
+      "titulo": "Concejo aprueba prohibir celulares en los colegios públicos",
+      "nivel_escolar": "media",
+      "texto": "Ciudad Norte, 5 de febrero. El concejo de Ciudad Norte aprobó un acuerdo que prohíbe el uso de celulares durante las clases en los colegios públicos a partir del segundo semestre. La concejala que presentó la propuesta afirmó que los teléfonos «roban la atención de los jóvenes» y citó un estudio según el cual los estudiantes revisan el celular cada siete minutos. Los rectores apoyaron la medida, pero la asociación de estudiantes la calificó de «autoritaria» y recordó que muchos jóvenes usan el teléfono para investigar porque no hay computadores suficientes. El acuerdo permite usar el celular cuando el profesor lo autorice para una actividad. La Secretaría de Educación tendrá tres meses para definir cómo se aplicará.",
+      "idea_principal": "El concejo de Ciudad Norte prohibió el uso de celulares en clase en los colegios públicos, medida que apoyan los rectores pero que los estudiantes consideran autoritaria.",
+      "elementos_clave": ["el concejo prohibió los celulares en clase", "colegios públicos", "apoyo de los rectores", "rechazo de los estudiantes"],
+      "respuestas": [
+        "El concejo prohibió los celulares en las clases de los colegios públicos; los rectores están de acuerdo pero los estudiantes dicen que es autoritario.",
+        "Ya no se podrá usar el celular en clase en los colegios públicos de Ciudad Norte.",
+        "Prohibieron los celulares en los colegios porque distraen a los estudiantes, que los revisan cada siete minutos.",
+        "Los estudiantes están en contra de una medida del concejo porque usan el celular para investigar.",
+        "Me parece bien que quiten los celulares porque uno no pone atención.",
+        "El profesor puede autorizar el celular para una actividad.",
+        "La Secretaría de Educación tiene tres meses para decidir.",
+        "Una nueva norma restringe el celular en las aulas públicas: los directivos la respaldan y los alumnos la rechazan por considerar que limita su acceso a la información."
+      ]
+    }
+  ]
+}
