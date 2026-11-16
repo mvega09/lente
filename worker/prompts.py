@@ -60,13 +60,24 @@ def mensajes_preparar_texto(titulo: str, cuerpo: str, instrucciones: str | None 
     ]
 
 
-def mensajes_analizar_animo(respuesta_abierta: str | None, macro, super_, micro, segundos) -> list[dict]:
+PASOS = {"macro": "la idea principal", "super": "las preguntas de organización",
+         "micro": "las palabras cargadas", "resultado": "el resultado"}
+
+
+def mensajes_analizar_animo(respuesta_abierta: str | None, macro, super_, micro, segundos,
+                            abandonada: bool = False, paso: str | None = None) -> list[dict]:
+    if abandonada:
+        # RF-21: el abandono anticipado es una de las señales de conducta
+        situacion = (f"El estudiante ABANDONÓ la actividad sin terminarla, cuando iba en "
+                     f"{PASOS.get(paso or '', 'un paso intermedio')}.\n")
+    else:
+        situacion = "El estudiante terminó la actividad.\n"
     return [
         {"role": "system", "content": SISTEMA},
         {"role": "user", "content": (
-            "Clasifica el ánimo del estudiante al terminar la actividad como "
-            "'motivacion_alta', 'neutral' o 'requiere_apoyo'.\n"
-            f"Resultados (0 a 1): macro={macro}, super={super_}, micro={micro}. "
+            "Clasifica el ánimo del estudiante como 'motivacion_alta', 'neutral' o 'requiere_apoyo'.\n"
+            + situacion +
+            f"Resultados (0 a 1; vacío = no lo hizo): macro={macro}, super={super_}, micro={micro}. "
             f"Tiempo: {segundos} segundos.\n"
             f"Lo que escribió: {respuesta_abierta or '(nada)'}"
         )},

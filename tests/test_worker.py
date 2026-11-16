@@ -67,5 +67,32 @@ def test_faltantes_cortados_quedan_en_el_ultimo_elemento_completo():
     assert corto.faltantes == "la mina, los peces"
 
 
+def test_animo_recibe_la_senal_de_abandono():
+    terminada = prompts.mensajes_analizar_animo("idea", 1, 0.5, 0.5, 300)[-1]["content"]
+    abandonada = prompts.mensajes_analizar_animo("idea", 0.5, None, None, 200, True, "super")[-1]["content"]
+    assert "terminó la actividad" in terminada and "ABANDONÓ" not in terminada
+    assert "ABANDONÓ" in abandonada and "las preguntas de organización" in abandonada
+
+
+class _ConexionMantenimiento:
+    def __init__(self, error=None, n=2):
+        self.error, self.n = error, n
+
+    def execute(self, sql, params=None):
+        if self.error:
+            raise self.error
+        return SimpleNamespace(fetchone=lambda: {"n": self.n})
+
+
+def test_mantenimiento_marca_abandonadas():
+    assert ia_worker.mantenimiento(_ConexionMantenimiento(n=2)) == 2
+
+
+def test_mantenimiento_no_detiene_el_worker_sin_migracion():
+    import psycopg
+    assert ia_worker.mantenimiento(_ConexionMantenimiento(psycopg.errors.UndefinedFunction("no existe"))) == 0
+    assert ia_worker.mantenimiento(_ConexionMantenimiento(psycopg.OperationalError("caída"))) == 0
+
+
 def test_validacion_queda_siempre_cargada_por_defecto():
     assert ia_worker.settings.ollama_keep_alive_validacion.startswith("-")

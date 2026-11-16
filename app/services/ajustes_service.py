@@ -53,6 +53,7 @@ POR_CURSO = {
     "minimo_para_logrado": _decimal(0, 1),
     "descuento_palabra_neutra": _decimal(0, 1),
     "alerta_veces_seguidas": _entero(1, 10),
+    "horas_para_abandono": _entero(1, 168),
     "nombres_de_niveles": _lista_textos,
 }
 

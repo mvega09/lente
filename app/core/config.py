@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     # está esperando (en la prueba real, la primera revisión tardó 42 s en frío).
     ollama_keep_alive_validacion: str = "-1m"
     ollama_precalentar_cada_s: int = 600
+    # Cada cuánto el worker marca las actividades abandonadas (RF-21)
+    mantenimiento_cada_s: int = 300
     # Límite duro por solicitud: si Ollama no responde, el trabajo se reporta y se reintenta
     ollama_timeout_revision_s: int = 90
     ollama_timeout_preparacion_s: int = 900

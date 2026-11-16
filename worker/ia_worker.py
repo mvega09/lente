@@ -163,7 +163,8 @@ def analizar_animo(conn: psycopg.Connection, trabajo_id: int) -> None:
     res = preguntar(
         modelo_validacion(conn),
         prompts.mensajes_analizar_animo(d["respuesta_abierta"], d["resultado_macro"],
-                                        d["resultado_super"], d["resultado_micro"], d["segundos"]),
+                                        d["resultado_super"], d["resultado_micro"], d["segundos"],
+                                        bool(d.get("abandonada")), d.get("paso")),
         Animo,
         num_predict=30,
         keep_alive=settings.ollama_keep_alive_validacion,
@@ -195,6 +196,21 @@ def procesar_siguiente(conn: psycopg.Connection) -> bool:
     return True
 
 
+def mantenimiento(conn: psycopg.Connection) -> int:
+    """Marca las actividades abandonadas (RF-21). Nunca detiene al worker."""
+    try:
+        n = conn.execute("SELECT marcar_abandonadas() AS n").fetchone()["n"]
+    except psycopg.errors.UndefinedFunction:
+        log.warning("La base aún no tiene marcar_abandonadas(): aplique db/migraciones/001")
+        return 0
+    except psycopg.Error as e:
+        log.warning("No se pudieron revisar las actividades abandonadas: %s", e)
+        return 0
+    if n:
+        log.info("%d actividad(es) marcadas como abandonadas", n)
+    return n
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     signal.signal(signal.SIGTERM, _pedir_detener)
@@ -206,7 +222,11 @@ def main() -> None:
             with psycopg.connect(settings.conninfo_ia, autocommit=True, row_factory=dict_row) as conn:
                 precalentar(conn)
                 ultimo_calentamiento = time.monotonic()
+                ultimo_mantenimiento = 0.0
                 while not _detener:
+                    if time.monotonic() - ultimo_mantenimiento > settings.mantenimiento_cada_s:
+                        mantenimiento(conn)
+                        ultimo_mantenimiento = time.monotonic()
                     if not procesar_siguiente(conn):
                         # Si Ollama se reinició, el modelo vuelve a cargarse antes del próximo estudiante
                         if time.monotonic() - ultimo_calentamiento > settings.ollama_precalentar_cada_s:

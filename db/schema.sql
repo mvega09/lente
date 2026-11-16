@@ -258,6 +258,7 @@ CREATE TABLE cola_ia (
   intentos         smallint    NOT NULL DEFAULT 0,
   max_intentos     smallint    NOT NULL DEFAULT 3,
   disponible_desde timestamptz NOT NULL DEFAULT now(),
+  tomado_en        timestamptz,          -- cuándo lo tomó el programa de IA
   ultimo_error     text,
   creada_en        timestamptz NOT NULL DEFAULT now(),
   terminada_en     timestamptz,
@@ -600,11 +601,25 @@ END $$;
 
 -- 5.1 Tomar el siguiente trabajo de la cola (el más urgente primero).
 --     Si hay varios programas de IA, nunca toman el mismo trabajo.
+--     Antes, recupera los trabajos que quedaron en "procesando" porque el
+--     programa de IA se detuvo a mitad (reinicio, corte de luz): se tratan
+--     como un error, así que se reintentan o, sin intentos, se marcan fallidos.
 CREATE FUNCTION tomar_trabajo_ia() RETURNS SETOF cola_ia
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = lente, public AS $$
+DECLARE v_id bigint;
 BEGIN
+  FOR v_id IN
+    SELECT id FROM cola_ia
+     WHERE estado = 'procesando'
+       AND coalesce(tomado_en, creada_en) < now() - CASE tarea WHEN 'preparar_texto'
+                                                   THEN interval '20 minutes' ELSE interval '3 minutes' END
+     FOR UPDATE SKIP LOCKED
+  LOOP
+    PERFORM reportar_error_ia(v_id, 'Trabajo interrumpido: el programa de IA se detuvo antes de terminar');
+  END LOOP;
+
   RETURN QUERY
-  UPDATE cola_ia c SET estado = 'procesando', intentos = c.intentos + 1
+  UPDATE cola_ia c SET estado = 'procesando', intentos = c.intentos + 1, tomado_en = now()
    WHERE c.id = (SELECT id FROM cola_ia
                   WHERE estado = 'pendiente' AND disponible_desde <= now()
                   ORDER BY prioridad, disponible_desde, id
@@ -673,6 +688,33 @@ BEGIN
     UPDATE textos SET estado = 'borrador', nota = 'La IA no pudo prepararlo. Complételo a mano.'
      WHERE id = c.texto_id;
   END IF;
+END $$;
+
+-- 5.6 Marcar como abandonadas las actividades sin movimiento (RF-21: "abandono
+--     anticipado"). Cuenta desde la última respuesta; el plazo es el ajuste
+--     horas_para_abandono del curso. Si el estudiante alcanzó a responder algo,
+--     se pide el análisis de ánimo con esa señal. Lo llama el programa de IA.
+CREATE FUNCTION marcar_abandonadas() RETURNS integer
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = lente, public AS $$
+DECLARE r record; n int := 0;
+BEGIN
+  FOR r IN
+    SELECT a.id, (SELECT max(x.recibida_en) FROM respuestas x WHERE x.actividad_id = a.id) AS ultima,
+           a.iniciada_en, s.curso_id
+      FROM actividades a JOIN estudiantes s ON s.id = a.estudiante_id
+     WHERE a.estado = 'en_curso'
+     FOR UPDATE OF a SKIP LOCKED
+  LOOP
+    CONTINUE WHEN coalesce(r.ultima, r.iniciada_en)
+                  >= now() - make_interval(hours => coalesce((ajuste('horas_para_abandono', r.curso_id))::int, 3));
+    UPDATE actividades SET estado = 'abandonada', terminada_en = coalesce(r.ultima, r.iniciada_en)
+     WHERE id = r.id;
+    IF r.ultima IS NOT NULL THEN
+      INSERT INTO cola_ia(tarea, prioridad, actividad_id) VALUES ('analizar_animo', 9, r.id);
+    END IF;
+    n := n + 1;
+  END LOOP;
+  RETURN n;
 END $$;
 
 -- ---------------------------------------------------------------------
@@ -771,7 +813,9 @@ CREATE VIEW ia_animo AS
 SELECT c.id AS trabajo_id,
        (SELECT r.texto FROM respuestas r WHERE r.actividad_id = a.id AND r.nivel = 'macro') AS respuesta_abierta,
        a.resultado_macro, a.resultado_super, a.resultado_micro,
-       extract(epoch FROM a.terminada_en - a.iniciada_en)::int AS segundos
+       extract(epoch FROM a.terminada_en - a.iniciada_en)::int AS segundos,
+       a.estado = 'abandonada' AS abandonada,
+       a.paso
   FROM cola_ia c JOIN actividades a ON a.id = c.actividad_id
  WHERE c.tarea = 'analizar_animo' AND c.estado = 'procesando';
 
@@ -793,7 +837,8 @@ GRANT EXECUTE ON FUNCTION ajuste(text, bigint), normalizar(text), nivel_escolar(
       dificultad_maxima(smallint), ultimo_animo(bigint) TO PUBLIC;
 GRANT EXECUTE ON FUNCTION ajuste(text, bigint), normalizar(text), nivel_escolar(smallint),
       tomar_trabajo_ia(), guardar_revision_idea(bigint,text,text,text,text,int),
-      guardar_animo(bigint,text), terminar_preparacion(bigint), reportar_error_ia(bigint,text)
+      guardar_animo(bigint,text), terminar_preparacion(bigint), reportar_error_ia(bigint,text),
+      marcar_abandonadas()
       TO lente_ia;
 GRANT SELECT ON ia_textos, ia_ideas, ia_animo, ajustes TO lente_ia;
 GRANT SELECT, INSERT, UPDATE, DELETE ON preguntas, palabras_cargadas TO lente_ia;
@@ -816,6 +861,7 @@ INSERT INTO ajustes(clave, valor, descripcion) VALUES
  ('minimo_para_logrado',      '0.6', 'Desde qué resultado (0 a 1) un nivel se muestra como "Logrado"'),
  ('descuento_palabra_neutra', '0.5', 'Cuánto resta marcar una palabra que no es cargada'),
  ('alerta_veces_seguidas',    '3',   'Veces seguidas con "requiere apoyo" para avisar al profesor (por validar)'),
+ ('horas_para_abandono',      '3',   'Horas sin respuestas para dar una actividad por abandonada'),
  ('ia_modelo',                '"qwen3:14b"', 'Modelo de lenguaje en Ollama'),
  ('ia_direccion',             '"http://VM-IA:11434/api/chat"', 'Dirección interna de Ollama'),
  ('ia_tiempo_maximo_seg',     '15',  'Tiempo máximo para revisar la idea principal'),
@@ -973,6 +1019,7 @@ COMMENT ON COLUMN cola_ia.actividad_id IS 'Actividad para analizar el ánimo.';
 COMMENT ON COLUMN cola_ia.intentos IS 'Cuántas veces se ha intentado.';
 COMMENT ON COLUMN cola_ia.max_intentos IS 'Máximo de intentos.';
 COMMENT ON COLUMN cola_ia.disponible_desde IS 'Desde cuándo se puede volver a intentar.';
+COMMENT ON COLUMN cola_ia.tomado_en IS 'Cuándo lo tomó el programa de IA (para recuperar trabajos interrumpidos).';
 COMMENT ON COLUMN cola_ia.ultimo_error IS 'Último error (por ejemplo, tiempo agotado).';
 COMMENT ON COLUMN cola_ia.creada_en IS 'Cuándo se pidió.';
 COMMENT ON COLUMN cola_ia.terminada_en IS 'Cuándo terminó.';
