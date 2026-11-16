@@ -54,6 +54,13 @@ def test_migracion_001_coincide_con_schema():
     assert "marcar_abandonadas()\n      TO lente_ia" in ESQUEMA
 
 
+@pytest.mark.parametrize("nombre", ["tomar_trabajo_ia", "marcar_abandonadas"])
+def test_cuerpo_plpgsql_valido(nombre):
+    # PostgreSQL no revisa el cuerpo de una función hasta ejecutarla
+    m = re.search(rf"CREATE FUNCTION {nombre}\(.*?END \$\$;", ESQUEMA, re.S)
+    assert pglast.parse_plpgsql(m.group(0))
+
+
 def test_trabajos_interrumpidos_se_recuperan_antes_de_tomar_uno_nuevo():
     cuerpo = _funcion(ESQUEMA, "tomar_trabajo_ia")
     assert cuerpo.index("reportar_error_ia") < cuerpo.index("estado = 'procesando', intentos")
