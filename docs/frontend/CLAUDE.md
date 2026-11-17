@@ -71,10 +71,10 @@ del colegio son compartidos). Nunca en el código ni en registros.
 | Mis cursos y estudiantes | profesor | `GET/POST /cursos`, `PATCH /cursos/{id}`, `GET/POST /cursos/{id}/estudiantes`, `GET/PATCH/DELETE /estudiantes/{id}` |
 | Biblioteca de textos | profesor | `GET/POST /textos`, `GET/PATCH/DELETE /textos/{id}` |
 | Revisar lo que propuso la IA | profesor | `PATCH /textos/{id}/paquete`, `POST/PATCH/DELETE /textos/{id}/preguntas`, `POST/DELETE /textos/{id}/palabras`, `POST /textos/{id}/preparar`, `POST /textos/{id}/aprobar`, `POST /textos/{id}/revisar` |
-| Modo explicación (resaltados) | profesor | `GET/POST/DELETE /textos/{id}/resaltados` |
+| Modo explicación (resaltados) | profesor | `GET/POST /textos/{id}/resaltados`, `PATCH/DELETE /textos/{id}/resaltados/{id}` (el PATCH cambia nivel o explicación) |
 | Textos activos del curso | profesor | `GET/POST/DELETE /cursos/{id}/textos` |
 | Actividad del estudiante | profesor (modo aula) | `POST /actividades`, `GET /actividades/{id}`, `POST/GET /actividades/{id}/macro`, `POST /actividades/{id}/super`, `POST /actividades/{id}/micro`, `DELETE /actividades/{id}/micro/{inicio}`, `POST /actividades/{id}/terminar`, `GET /actividades/{id}/resultado` |
-| Progreso del estudiante | profesor | `GET /estudiantes/{id}/progreso`, `GET /estudiantes/{id}/historial` |
+| Progreso del estudiante | profesor | `GET /estudiantes/{id}/progreso` (incluye `pendientes` con título), `GET /estudiantes/{id}/historial?nivel=macro\|super\|micro` |
 | Panel del curso y alertas | profesor | `GET /cursos/{id}/panel`, `GET /alertas`, `POST /alertas/{id}/atender` |
 | Reglas del curso (puntos y niveles) | profesor | `GET /cursos/{id}/ajustes`, `PUT/DELETE /cursos/{id}/ajustes/{clave}` |
 
@@ -108,6 +108,16 @@ El orden es obligatorio: macro → super → micro → resultado. Un paso fuera 
    incluido) y `texto` debe ser exactamente `cuerpo[inicio:fin]`.
 6. `POST /actividades/{id}/terminar` → resultados por nivel, `puntos_ganados`,
    `logros_nuevos` y `recomendaciones`. Después: `GET /actividades/{id}/resultado`.
+
+### Datos listos para las pantallas
+
+- Lista de estudiantes: cada uno trae `porcentaje_macro`, `porcentaje_super` y
+  `porcentaje_micro` (0-100, vacío si no ha hecho actividades) para las barras.
+- Panel del curso: `avance_macro`, `avance_super`, `avance_micro` (promedio del curso).
+- Crear profesor: `usuario` y `clave` son opcionales. Si no se envían, la API
+  propone el usuario a partir del nombre y genera una clave temporal que llega
+  **una sola vez** en `clave_temporal`: muéstrala al administrador para que la
+  entregue y no la guardes. Restablecer la clave funciona igual (responde 200).
 
 ## Reglas que el frontend debe respetar
 
