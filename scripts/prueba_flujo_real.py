@@ -142,7 +142,10 @@ def correr(api: httpx.Client, usuario: str, clave: str) -> None:
     j = cuerpo.find(neutra)
     if any(p["inicio"] <= j < p["fin"] for p in detalle["palabras"]):
         neutra, j = "semana", cuerpo.find("semana")
-    marcas = [{"codigo_envio": codigo(), "texto": p["palabra"], "inicio": p["inicio"], "fin": p["fin"]} for p in cargadas]
+    # Secundaria: el estudiante clasifica cada palabra (RF-12); la segunda, mal a propósito
+    otro_tipo = {"adjetivo": "verbo", "verbo": "adjetivo", "expresion": "adjetivo"}
+    marcas = [{"codigo_envio": codigo(), "texto": p["palabra"], "inicio": p["inicio"], "fin": p["fin"],
+               "tipo_palabra": p["tipo"] if i == 0 else otro_tipo[p["tipo"]]} for i, p in enumerate(cargadas)]
     marcas.append({"codigo_envio": codigo(), "texto": neutra, "inicio": j, "fin": j + len(neutra)})
     r = pedir("POST", f"/actividades/{aid}/micro", json={"marcas": marcas, "enviada_en": ahora()})
     ok(f"{r['recibidas']} marcas: {[p['palabra'] for p in cargadas]} (cargadas) + «{neutra}» (neutra, a propósito)")
@@ -151,6 +154,9 @@ def correr(api: httpx.Client, usuario: str, clave: str) -> None:
     res = pedir("POST", f"/actividades/{aid}/terminar")
     ok(f"macro={res['macro']['resultado']} · super={res['super']['resultado']} · micro={res['micro']['resultado']} "
        f"· puntos={res['puntos_ganados']} · logros={[l['nombre'] for l in res['logros_nuevos']]}")
+    m = res["micro"]
+    ok(f"tipo de palabra: {m['tipos_correctos']} de {m['tipos_evaluados']} bien clasificadas "
+       f"{[(a['palabra'], a['tu_tipo'], a['tipo_correcto']) for a in m['aciertos']]}")
 
     paso(10, "Ánimo en segundo plano (RF-21, qwen3:4b) y seguimiento del profesor (RF-06 a RF-08)")
     prog, seg = esperar("Análisis de ánimo", lambda: pedir("GET", f"/estudiantes/{est['id']}/progreso"),
