@@ -1,4 +1,4 @@
-# Todos los días a las 2:00 a. m. Si la VM estaba apagada a esa hora, corre al encender.
+# Todos los días a las 2:00 en la hora de la VM (UTC) = 9:00 p. m. en Colombia. Si la VM estaba apagada a esa hora, corre al encender.
 [Unit]
 Description=LENTE copia de seguridad diaria
 

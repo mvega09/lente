@@ -23,7 +23,7 @@ Después de aplicar una migración que cambia el worker, reiniciarlo en la VM-AP
 ## Copias de seguridad (VM-BD, RNF-04)
 
 `deploy/respaldo/` contiene el script y un temporizador de systemd que guarda
-una copia diaria (2:00 a. m.) en `/var/backups/lente`, verifica que se pueda
+una copia diaria (2:00 UTC, que son las 9:00 p. m. en Colombia) en `/var/backups/lente`, verifica que se pueda
 leer y conserva 14 días.
 
 ```bash
