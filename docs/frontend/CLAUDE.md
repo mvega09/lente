@@ -77,6 +77,7 @@ del colegio son compartidos). Nunca en el código ni en registros.
 | Progreso del estudiante | profesor | `GET /estudiantes/{id}/progreso` (incluye `pendientes` con título), `GET /estudiantes/{id}/historial?nivel=macro\|super\|micro` |
 | Panel del curso y alertas | profesor | `GET /cursos/{id}/panel`, `GET /alertas`, `POST /alertas/{id}/atender` |
 | Reglas del curso (puntos y niveles) | profesor | `GET /cursos/{id}/ajustes`, `PUT/DELETE /cursos/{id}/ajustes/{clave}` |
+| Logros | administrador | `GET/POST /admin/logros`, `PATCH /admin/logros/{id}` (desactivar en vez de borrar) |
 
 ### Ciclo de un texto
 
@@ -118,6 +119,17 @@ El orden es obligatorio: macro → super → micro → resultado. Un paso fuera 
   propone el usuario a partir del nombre y genera una clave temporal que llega
   **una sola vez** en `clave_temporal`: muéstrala al administrador para que la
   entregue y no la guardes. Restablecer la clave funciona igual (responde 200).
+- Inicio del estudiante: `GET /estudiantes/{id}/progreso` trae `logros_catalogo`,
+  todos los logros activos con `ganado` (sí o no), para mostrar los bloqueados.
+- Primaria, paso micro: la vista de la actividad trae `palabras_esperadas` para
+  la pista «Hay N palabras fuertes». En secundaria y media llega vacío.
+- Tipo de palabra (secundaria y media): envía `tipo_palabra` (adjetivo, verbo o
+  expresion) en cada marca. El resultado dice en cada acierto `tu_tipo` y
+  `tipo_correcto`, más `tipos_evaluados` y `tipos_correctos`. No cambia la nota.
+- Retroalimentación de la micro antes del resultado: al pulsar «Revisar mis
+  palabras», llama a `POST /actividades/{id}/terminar` y muestra primero su parte
+  `micro` (aciertos, omisiones y neutras); con «Ver mi resultado» muestra el resto
+  de la misma respuesta. No hay que llamar otra vez a la API.
 
 ## Reglas que el frontend debe respetar
 

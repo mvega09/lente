@@ -52,6 +52,32 @@ SELECT lower(usuario) AS usuario FROM lente.usuarios
  WHERE left(lower(usuario), length(%(base)s::text)) = %(base)s::text
 """
 
+_COLUMNAS_LOGRO = """
+SELECT l.id, l.nombre, l.descripcion, l.regla, l.meta, l.activo,
+       (SELECT count(*) FROM lente.logros_ganados g WHERE g.logro_id = l.id) AS ganados
+  FROM lente.logros l
+"""
+
+SQL_LOGROS = _COLUMNAS_LOGRO + " ORDER BY l.id"
+
+SQL_OBTENER_LOGRO = _COLUMNAS_LOGRO + " WHERE l.id = %(id)s"
+
+SQL_CREAR_LOGRO = """
+INSERT INTO lente.logros (nombre, descripcion, regla, meta)
+VALUES (%(nombre)s, %(descripcion)s, %(regla)s, %(meta)s)
+RETURNING id
+"""
+
+SQL_ACTUALIZAR_LOGRO = """
+UPDATE lente.logros
+   SET nombre = coalesce(%(nombre)s::text, nombre),
+       descripcion = coalesce(%(descripcion)s::text, descripcion),
+       meta = coalesce(%(meta)s::smallint, meta),
+       activo = coalesce(%(activo)s::boolean, activo)
+ WHERE id = %(id)s
+RETURNING id
+"""
+
 SQL_RESUMEN = """
 SELECT (SELECT count(*) FROM lente.usuarios WHERE rol = 'profesor')              AS total_profesores,
        (SELECT count(*) FROM lente.usuarios WHERE rol = 'profesor' AND activo)   AS profesores_activos,
@@ -123,6 +149,31 @@ async def restablecer_clave(conn: AsyncConnection, profesor_id: int, clave: str 
     if await uno(conn, SQL_RESTABLECER_CLAVE, {"id": profesor_id, "clave": clave or generada}) is None:
         raise NoEncontrado("El profesor")
     return {"clave_temporal": generada}
+
+
+# ---------------------------------------------------------------- logros (RF-18, RNF-08)
+
+async def listar_logros(conn: AsyncConnection) -> list[dict]:
+    return await varios(conn, SQL_LOGROS)
+
+
+async def obtener_logro(conn: AsyncConnection, logro_id: int) -> dict:
+    fila = await uno(conn, SQL_OBTENER_LOGRO, {"id": logro_id})
+    if fila is None:
+        raise NoEncontrado("El logro")
+    return fila
+
+
+async def crear_logro(conn: AsyncConnection, datos: dict) -> dict:
+    nuevo = await uno(conn, SQL_CREAR_LOGRO, datos)
+    return await obtener_logro(conn, nuevo["id"])
+
+
+async def actualizar_logro(conn: AsyncConnection, logro_id: int, cambios: dict) -> dict:
+    params = {"id": logro_id, "nombre": None, "descripcion": None, "meta": None, "activo": None} | cambios
+    if await uno(conn, SQL_ACTUALIZAR_LOGRO, params) is None:
+        raise NoEncontrado("El logro")
+    return await obtener_logro(conn, logro_id)
 
 
 async def resumen(conn: AsyncConnection) -> dict:

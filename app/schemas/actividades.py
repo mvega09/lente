@@ -37,6 +37,8 @@ class ActividadVista(BaseModel):
     nivel_escolar: str
     instruccion: str = Field(description="Instrucción adaptada al grado (RF-19)")
     preguntas: list[PreguntaActividad] = Field(default=[], description="Solo en el paso de superestructura")
+    palabras_esperadas: int | None = Field(default=None, description="Solo primaria, en el paso micro: "
+                                           "pista de cuántas palabras cargadas hay (RF-19)")
     iniciada_en: datetime
 
 
@@ -144,6 +146,8 @@ class PalabraResultado(BaseModel):
     palabra: str
     tipo: str | None = None
     explicacion: str | None = None
+    tu_tipo: str | None = Field(default=None, description="El tipo que eligió el estudiante (vacío en primaria)")
+    tipo_correcto: bool | None = Field(default=None, description="Si acertó el tipo; vacío si no lo eligió")
 
 
 class ResultadoMicro(NivelResultado):
@@ -151,6 +155,8 @@ class ResultadoMicro(NivelResultado):
     omisiones: list[PalabraResultado]
     neutras_marcadas: list[PalabraResultado]
     explicacion: str | None
+    tipos_evaluados: int = Field(default=0, description="Aciertos en los que el estudiante eligió un tipo")
+    tipos_correctos: int = Field(default=0, description="De esos, cuántos tipos acertó (no cambia la nota)")
 
 
 class Logro(BaseModel):

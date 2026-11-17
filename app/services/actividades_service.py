@@ -118,11 +118,14 @@ SELECT q.id AS pregunta_id, q.orden, q.pregunta, q.opciones, q.correcta, r.opcio
 """
 
 SQL_MICRO = """
-SELECT r.texto, r.inicio, r.fin, r.es_correcta
+SELECT r.texto, r.inicio, r.fin, r.es_correcta, r.tipo_palabra
   FROM lente.respuestas r
  WHERE r.actividad_id = %(actividad)s AND r.nivel = 'micro'
  ORDER BY r.inicio
 """
+
+# RF-19: en primaria se da la pista de cuántas palabras cargadas tiene el texto
+SQL_CONTAR_PALABRAS = "SELECT count(*) AS n FROM lente.palabras_cargadas WHERE texto_id = %(texto)s"
 
 SQL_PALABRAS_TEXTO = """
 SELECT palabra, tipo, inicio, fin, explicacion
@@ -192,9 +195,9 @@ def _normalizar(t: str) -> str:
     return "".join(ch for ch in t if ch.isalnum() or ch.isspace()).strip()
 
 
-def _vista(act: dict, preguntas: list[dict] | None = None) -> dict:
+def _vista(act: dict, preguntas: list[dict] | None = None, palabras_esperadas: int | None = None) -> dict:
     return {**act, "instruccion": instruccion(act["nivel_escolar"], act["paso"]),
-            "preguntas": preguntas or []}
+            "preguntas": preguntas or [], "palabras_esperadas": palabras_esperadas}
 
 
 # ================================================================ flujo
@@ -211,7 +214,10 @@ async def abrir(conn: AsyncConnection, profesor_id: int, estudiante_id: int, tex
 async def ver(conn: AsyncConnection, profesor_id: int, actividad_id: int) -> dict:
     act = await _actividad(conn, profesor_id, actividad_id)
     preguntas = await _preguntas(conn, act) if act["paso"] == "super" else None
-    return _vista(act, preguntas)
+    pista = None
+    if act["nivel_escolar"] == "primaria" and act["paso"] == "micro":
+        pista = (await uno(conn, SQL_CONTAR_PALABRAS, {"texto": act["texto_id"]}))["n"]
+    return _vista(act, preguntas, pista)
 
 
 async def responder_macro(conn: AsyncConnection, profesor_id: int, actividad_id: int,
@@ -326,8 +332,17 @@ def analizar_micro(palabras: list[dict], marcas: list[dict]) -> tuple[list[dict]
         return p["inicio"] < m["fin"] and m["inicio"] < p["fin"] or _normalizar(p["palabra"]) == _normalizar(m["texto"])
 
     correctas = [m for m in marcas if m["es_correcta"]]
-    aciertos = [p for p in palabras if any(toca(p, m) for m in correctas)]
-    omisiones = [p for p in palabras if p not in aciertos]
+    aciertos = []
+    for p in palabras:
+        marca = next((m for m in correctas if toca(p, m)), None)
+        if marca is None:
+            continue
+        # RF-12: en secundaria y media el estudiante dice si es adjetivo, verbo o expresión.
+        # Es retroalimentación: no cambia la calificación, que depende de encontrar la palabra.
+        tu_tipo = marca.get("tipo_palabra")
+        aciertos.append(p | {"tu_tipo": tu_tipo, "tipo_correcto": (tu_tipo == p["tipo"]) if tu_tipo else None})
+    hallados = {(p["inicio"], p["fin"]) for p in aciertos}
+    omisiones = [p for p in palabras if (p["inicio"], p["fin"]) not in hallados]
     neutras = [{"palabra": m["texto"]} for m in marcas if not m["es_correcta"]]
     return aciertos, omisiones, neutras
 
@@ -385,6 +400,8 @@ async def resultado(conn: AsyncConnection, profesor_id: int, actividad_id: int) 
             "resultado": res["micro"], "logrado": res["micro"] >= minimo,
             "explicacion": consejos["consejo_micro"],
             "aciertos": aciertos, "omisiones": omisiones, "neutras_marcadas": neutras,
+            "tipos_evaluados": sum(a["tu_tipo"] is not None for a in aciertos),
+            "tipos_correctos": sum(bool(a["tipo_correcto"]) for a in aciertos),
         },
         "recomendaciones": recomendaciones(res, minimo, consejos, macro["faltantes_ia"]),
         "logros_nuevos": logros,

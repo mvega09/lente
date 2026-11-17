@@ -25,6 +25,15 @@ class ActividadResumen(BaseModel):
     terminada_en: datetime | None
 
 
+class LogroCatalogo(BaseModel):
+    nombre: str
+    descripcion: str
+    regla: str
+    meta: int
+    ganado: bool
+    ganado_en: datetime | None
+
+
 class TextoPendiente(BaseModel):
     texto_id: int
     titulo: str
@@ -55,6 +64,7 @@ class Progreso(BaseModel):
     animo: str | None = Field(description="Última tendencia registrada (RF-21)")
     aviso_animo: str = AVISO
     pendientes: list[TextoPendiente] = Field(default=[], description="Textos activos que aún no termina (RF-06)")
+    logros_catalogo: list[LogroCatalogo] = Field(default=[], description="Todos los logros activos y si ya los ganó (RF-18)")
     logros: list[LogroGanado]
     evolucion: list[ActividadResumen]
 

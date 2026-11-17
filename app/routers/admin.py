@@ -3,8 +3,8 @@
 from fastapi import APIRouter, status
 
 from app.core.deps import Admin, Conn
-from app.schemas.admin import (ClaveGenerada, ClaveTemporal, ProfesorCambios, ProfesorCreado, ProfesorNuevo,
-                               ProfesorSalida, ResumenAdmin)
+from app.schemas.admin import (ClaveGenerada, ClaveTemporal, LogroCambios, LogroNuevo, LogroSalida, ProfesorCambios,
+                               ProfesorCreado, ProfesorNuevo, ProfesorSalida, ResumenAdmin)
 from app.schemas.cursos import EstudianteAdmin
 from app.schemas.seguimiento import Ajuste, NuevoValor
 from app.services import admin_service as svc
@@ -49,6 +49,23 @@ async def restablecer_clave(profesor_id: int, datos: ClaveTemporal, _: Admin, co
 @router.get("/estudiantes", response_model=list[EstudianteAdmin], summary="Estudiantes registrados (RF-04)")
 async def listar_estudiantes(_: Admin, conn: Conn):
     return await svc.listar_estudiantes(conn)
+
+
+@router.get("/logros", response_model=list[LogroSalida], summary="Logros que se pueden ganar (RF-18)")
+async def listar_logros(_: Admin, conn: Conn):
+    return await svc.listar_logros(conn)
+
+
+@router.post("/logros", response_model=LogroSalida, status_code=status.HTTP_201_CREATED,
+             summary="Crear un logro con una de las reglas existentes (RF-18, RNF-08)")
+async def crear_logro(datos: LogroNuevo, _: Admin, conn: Conn):
+    return await svc.crear_logro(conn, datos.model_dump())
+
+
+@router.patch("/logros/{logro_id}", response_model=LogroSalida,
+              summary="Cambiar nombre, descripción o meta de un logro, o desactivarlo (RNF-08)")
+async def actualizar_logro(logro_id: int, datos: LogroCambios, _: Admin, conn: Conn):
+    return await svc.actualizar_logro(conn, logro_id, datos.model_dump(exclude_unset=True))
 
 
 @router.get("/ajustes", response_model=list[Ajuste], summary="Valores generales: puntos, umbrales, modelo y prompts")

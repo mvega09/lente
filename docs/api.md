@@ -47,6 +47,9 @@ pide algo de otro profesor recibe **404** (RNF-05).
 | `GET` | `/admin/ajustes` | Valores generales: puntos, umbrales, modelo y prompts |
 | `PUT` | `/admin/ajustes/{clave}` | Cambiar un valor general sin tocar código (RNF-08) |
 | `GET` | `/admin/estudiantes` | Estudiantes registrados (RF-04) |
+| `GET` | `/admin/logros` | Logros que se pueden ganar (RF-18) |
+| `POST` | `/admin/logros` | Crear un logro con una de las reglas existentes (RF-18, RNF-08) |
+| `PATCH` | `/admin/logros/{logro_id}` | Cambiar nombre, descripción o meta de un logro, o desactivarlo (RNF-08) |
 | `GET` | `/admin/profesores` | Profesores registrados (RF-02, RF-04) |
 | `POST` | `/admin/profesores` | Crear cuenta de profesor; usuario y clave temporal se generan si no se envían (RF-02) |
 | `GET` | `/admin/profesores/{profesor_id}` | Ver un profesor |

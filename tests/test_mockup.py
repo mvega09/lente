@@ -39,7 +39,8 @@ def test_progreso_lista_los_textos_pendientes():
     conn = ConexionFalsa(fila, [], [], pendientes)
     salida = asyncio.run(seguimiento_service.progreso(conn, 7, 1))
     assert salida["pendientes"] == pendientes
-    assert conn.consultas[-1][0] == seguimiento_service.SQL_PENDIENTES
+    sql_ejecutadas = [sql for sql, _ in conn.consultas]
+    assert seguimiento_service.SQL_PENDIENTES in sql_ejecutadas
     assert "a.estado = 'terminada'" in seguimiento_service.SQL_PENDIENTES
 
 
@@ -135,3 +136,65 @@ def test_restablecer_clave_devuelve_la_generada(cliente, monkeypatch):
     assert r.status_code == 200 and r.json() == {"clave_temporal": "Lente-ABCDEFGH"}
     r = cliente.post("/admin/profesores/2/clave", headers=h, json={"clave": "otra-clave-1"})
     assert r.json() == {"clave_temporal": None}
+
+
+# ---------------------------------------------------------------- B7 · pista de primaria
+
+def _actividad(nivel_escolar, paso):
+    return {"id": 1, "estudiante_id": 1, "estudiante": "Ana", "curso_id": 1, "texto_id": 3, "numero": 1,
+            "estado": "en_curso", "paso": paso, "grado": 4, "nivel_escolar": nivel_escolar,
+            "dificultad_maxima": 1, "resultado_macro": None, "resultado_super": None, "resultado_micro": None,
+            "puntos_ganados": 0, "iniciada_en": "2026-11-16T10:00:00Z", "terminada_en": None,
+            "titulo": "T", "cuerpo": "Texto", "fuente": None}
+
+
+def test_primaria_recibe_la_pista_de_palabras_en_micro():
+    from app.services import actividades_service as act
+    vista = asyncio.run(act.ver(ConexionFalsa(_actividad("primaria", "micro"), {"n": 6}), 7, 1))
+    assert vista["palabras_esperadas"] == 6
+    # Secundaria y media no reciben pista; tampoco primaria en otros pasos
+    assert asyncio.run(act.ver(ConexionFalsa(_actividad("secundaria", "micro")), 7, 1))["palabras_esperadas"] is None
+    assert asyncio.run(act.ver(ConexionFalsa(_actividad("primaria", "macro")), 7, 1))["palabras_esperadas"] is None
+
+
+# ---------------------------------------------------------------- B8 · tipo de palabra
+
+def test_resultado_micro_evalua_el_tipo_sin_cambiar_la_nota():
+    from app.services import actividades_service as act
+    palabras = [{"palabra": "brutal", "tipo": "adjetivo", "inicio": 0, "fin": 6, "explicacion": None},
+                {"palabra": "arrasó", "tipo": "verbo", "inicio": 10, "fin": 16, "explicacion": None},
+                {"palabra": "caos", "tipo": "expresion", "inicio": 20, "fin": 24, "explicacion": None}]
+    marcas = [{"texto": "brutal", "inicio": 0, "fin": 6, "es_correcta": True, "tipo_palabra": "adjetivo"},
+              {"texto": "arrasó", "inicio": 10, "fin": 16, "es_correcta": True, "tipo_palabra": "adjetivo"},
+              {"texto": "caos", "inicio": 20, "fin": 24, "es_correcta": True, "tipo_palabra": None}]
+    aciertos, omisiones, neutras = act.analizar_micro(palabras, marcas)
+    assert [(a["palabra"], a["tu_tipo"], a["tipo_correcto"]) for a in aciertos] == [
+        ("brutal", "adjetivo", True), ("arrasó", "adjetivo", False), ("caos", None, None)]
+    assert omisiones == [] and neutras == []
+    assert "r.tipo_palabra" in act.SQL_MICRO
+
+
+# ---------------------------------------------------------------- B10 · logros configurables
+
+def test_logros_solo_para_el_administrador(cliente):
+    assert cliente.get("/admin/logros", headers=cabeceras("profesor", 7)).status_code == 403
+    nuevo = {"nombre": "Lector constante", "descripcion": "Diez actividades", "regla": "actividades_terminadas", "meta": 10}
+    h = cabeceras("administrador", 1)
+    assert cliente.post("/admin/logros", headers=h, json=nuevo | {"regla": "inventada"}).status_code == 422
+    assert cliente.post("/admin/logros", headers=h, json=nuevo | {"meta": 0}).status_code == 422
+
+
+def test_crear_y_desactivar_logro():
+    logro = {"id": 7, "nombre": "Lector constante", "descripcion": "Diez actividades",
+             "regla": "actividades_terminadas", "meta": 10, "activo": True, "ganados": 0}
+    conn = ConexionFalsa({"id": 7}, logro)
+    salida = asyncio.run(admin_service.crear_logro(conn, {"nombre": "Lector constante", "descripcion": "Diez actividades",
+                                                          "regla": "actividades_terminadas", "meta": 10}))
+    assert salida["id"] == 7
+    conn = ConexionFalsa({"id": 7}, logro | {"activo": False})
+    asyncio.run(admin_service.actualizar_logro(conn, 7, {"activo": False}))
+    assert conn.consultas[0][1] == {"id": 7, "nombre": None, "descripcion": None, "meta": None, "activo": False}
+
+
+def test_progreso_trae_el_catalogo_de_logros():
+    assert "WHERE l.activo OR g.estudiante_id IS NOT NULL" in seguimiento_service.SQL_CATALOGO_LOGROS

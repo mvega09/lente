@@ -34,6 +34,15 @@ SELECT t.id AS texto_id, t.titulo
  ORDER BY tc.activado_en
 """
 
+# Todos los logros activos, marcando los que ya ganó (pantalla de inicio del estudiante)
+SQL_CATALOGO_LOGROS = """
+SELECT l.nombre, l.descripcion, l.regla, l.meta, g.estudiante_id IS NOT NULL AS ganado, g.ganado_en
+  FROM lente.logros l
+  LEFT JOIN lente.logros_ganados g ON g.logro_id = l.id AND g.estudiante_id = %(id)s
+ WHERE l.activo OR g.estudiante_id IS NOT NULL
+ ORDER BY l.id
+"""
+
 SQL_EVOLUCION = """
 SELECT a.id, t.titulo, a.numero, a.estado, a.resultado_macro, a.resultado_super, a.resultado_micro,
        a.puntos_ganados, a.iniciada_en, a.terminada_en
@@ -119,6 +128,7 @@ async def progreso(conn: AsyncConnection, profesor_id: int, estudiante_id: int) 
     p["logros"] = await varios(conn, SQL_LOGROS_ESTUDIANTE, {"id": estudiante_id})
     p["evolucion"] = await varios(conn, SQL_EVOLUCION, {"id": estudiante_id})
     p["pendientes"] = await varios(conn, SQL_PENDIENTES, {"id": estudiante_id})
+    p["logros_catalogo"] = await varios(conn, SQL_CATALOGO_LOGROS, {"id": estudiante_id})
     return p
 
 
