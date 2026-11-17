@@ -41,18 +41,20 @@ RETURNING id
 """
 
 _COLUMNAS_ESTUDIANTE = """
-SELECT id, nombre, curso_id, curso, grado, grado_texto, nivel_escolar, estado,
-       puntos, nivel, racha, mejor_racha
-  FROM lente.vista_estudiantes
+SELECT e.id, e.nombre, e.curso_id, e.curso, e.grado, e.grado_texto, e.nivel_escolar, e.estado,
+       e.puntos, e.nivel, e.racha, e.mejor_racha,
+       p.porcentaje_macro, p.porcentaje_super, p.porcentaje_micro
+  FROM lente.vista_estudiantes e
+  LEFT JOIN lente.vista_progreso p ON p.estudiante_id = e.id
 """
 
 SQL_ESTUDIANTES_CURSO = _COLUMNAS_ESTUDIANTE + """
- WHERE curso_id = %(curso)s AND profesor_id = %(profesor)s
- ORDER BY nombre
+ WHERE e.curso_id = %(curso)s AND e.profesor_id = %(profesor)s
+ ORDER BY e.nombre
 """
 
 SQL_OBTENER_ESTUDIANTE = _COLUMNAS_ESTUDIANTE + """
- WHERE id = %(id)s AND profesor_id = %(profesor)s
+ WHERE e.id = %(id)s AND e.profesor_id = %(profesor)s
 """
 
 # El INSERT ... SELECT garantiza que el curso sea del profesor de la sesión

@@ -134,6 +134,14 @@ class ResaltadoNuevo(BaseModel):
         return self
 
 
+class ResaltadoCambios(BaseModel):
+    """Cambia el nivel o la explicación de un resaltado; la posición no se mueve (se borra y se crea otro)."""
+
+    nivel: Nivel | None = None
+    explicacion: str | None = Field(default=None, description="Enviar null para dejarlo sin explicación")
+    es_idea_principal: bool | None = None
+
+
 class Resaltado(BaseModel):
     id: int
     nivel: str

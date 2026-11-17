@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query, status
 
 from app.core.deps import Conn, Profesor
 from app.schemas.textos import (Activacion, EstadoTexto, PaqueteCambios, Palabra, PalabraNueva, Pregunta,
-                                PreguntaCambios, PreguntaNueva, Resaltado, ResaltadoNuevo, TextoCambios,
+                                PreguntaCambios, PreguntaNueva, Resaltado, ResaltadoCambios, ResaltadoNuevo, TextoCambios,
                                 TextoDetalle, TextoEnCurso, TextoNuevo, TextoResumen)
 from app.services import textos_service as svc
 
@@ -108,6 +108,12 @@ async def listar_resaltados(texto_id: int, yo: Profesor, conn: Conn):
              summary="Resaltar un fragmento con su explicación; el texto original no cambia")
 async def crear_resaltado(texto_id: int, datos: ResaltadoNuevo, yo: Profesor, conn: Conn):
     return await svc.crear_resaltado(conn, yo.id, texto_id, datos.model_dump())
+
+
+@router.patch("/textos/{texto_id}/resaltados/{resaltado_id}", response_model=Resaltado,
+              summary="Cambiar el nivel o la explicación de un resaltado (RF-14)")
+async def actualizar_resaltado(texto_id: int, resaltado_id: int, datos: ResaltadoCambios, yo: Profesor, conn: Conn):
+    return await svc.actualizar_resaltado(conn, yo.id, texto_id, resaltado_id, datos.model_dump(exclude_unset=True))
 
 
 @router.delete("/textos/{texto_id}/resaltados/{resaltado_id}", status_code=NC, summary="Quitar resaltado")

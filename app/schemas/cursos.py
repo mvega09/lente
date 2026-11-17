@@ -51,6 +51,10 @@ class EstudianteSalida(BaseModel):
     nivel: int
     racha: int
     mejor_racha: int
+    # Avance por nivel (0-100) para las barras de la lista; vacío si no ha hecho actividades
+    porcentaje_macro: float | None = None
+    porcentaje_super: float | None = None
+    porcentaje_micro: float | None = None
 
 
 class EstudianteAdmin(EstudianteSalida):

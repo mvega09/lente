@@ -48,10 +48,10 @@ pide algo de otro profesor recibe **404** (RNF-05).
 | `PUT` | `/admin/ajustes/{clave}` | Cambiar un valor general sin tocar código (RNF-08) |
 | `GET` | `/admin/estudiantes` | Estudiantes registrados (RF-04) |
 | `GET` | `/admin/profesores` | Profesores registrados (RF-02, RF-04) |
-| `POST` | `/admin/profesores` | Crear cuenta de profesor (RF-02) |
+| `POST` | `/admin/profesores` | Crear cuenta de profesor; usuario y clave temporal se generan si no se envían (RF-02) |
 | `GET` | `/admin/profesores/{profesor_id}` | Ver un profesor |
 | `PATCH` | `/admin/profesores/{profesor_id}` | Modificar nombre o activar/desactivar la cuenta (RF-02) |
-| `POST` | `/admin/profesores/{profesor_id}/clave` | Restablecer contraseña temporal y desbloquear (RF-02) |
+| `POST` | `/admin/profesores/{profesor_id}/clave` | Restablecer contraseña temporal y desbloquear; sin clave, el sistema la genera (RF-02) |
 | `GET` | `/admin/resumen` | Totales de profesores y estudiantes (RF-04) |
 
 ### Autenticación
@@ -118,5 +118,6 @@ pide algo de otro profesor recibe **404** (RNF-05).
 | `POST` | `/textos/{texto_id}/preparar` | Pedir a la IA que (re)prepare el paquete |
 | `GET` | `/textos/{texto_id}/resaltados` | Resaltados del modo explicación (RF-13, RF-14) |
 | `POST` | `/textos/{texto_id}/resaltados` | Resaltar un fragmento con su explicación; el texto original no cambia |
+| `PATCH` | `/textos/{texto_id}/resaltados/{resaltado_id}` | Cambiar el nivel o la explicación de un resaltado (RF-14) |
 | `DELETE` | `/textos/{texto_id}/resaltados/{resaltado_id}` | Quitar resaltado |
 | `POST` | `/textos/{texto_id}/revisar` | Volver un texto aprobado a revisión (se retira de los cursos) |

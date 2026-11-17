@@ -159,6 +159,16 @@ SELECT t.id, %(nivel)s, %(inicio)s, %(fin)s,
 RETURNING id, nivel, inicio, fin, fragmento, explicacion, es_idea_principal, creado_en
 """
 
+SQL_ACTUALIZAR_RESALTADO = """
+UPDATE lente.resaltados r
+   SET nivel = coalesce(%(nivel)s::text, r.nivel),
+       explicacion = CASE WHEN %(cambiar_explicacion)s::boolean THEN %(explicacion)s::text ELSE r.explicacion END,
+       es_idea_principal = coalesce(%(es_idea_principal)s::boolean, r.es_idea_principal)
+  FROM lente.textos t
+ WHERE r.id = %(id)s AND r.texto_id = %(texto)s AND t.id = r.texto_id AND t.profesor_id = %(profesor)s
+RETURNING r.id, r.nivel, r.inicio, r.fin, r.fragmento, r.explicacion, r.es_idea_principal, r.creado_en
+"""
+
 SQL_BORRAR_RESALTADO = """
 DELETE FROM lente.resaltados r USING lente.textos t
  WHERE r.id = %(id)s AND r.texto_id = %(texto)s AND t.id = r.texto_id AND t.profesor_id = %(profesor)s
@@ -361,6 +371,17 @@ async def crear_resaltado(conn: AsyncConnection, profesor_id: int, texto_id: int
         if not texto["cuerpo"]:
             raise Conflicto("El texto no tiene cuerpo para resaltar")
         raise DatoInvalido("El fragmento se sale del texto")
+    return fila
+
+
+async def actualizar_resaltado(conn: AsyncConnection, profesor_id: int, texto_id: int,
+                               resaltado_id: int, cambios: dict) -> dict:
+    params = {"id": resaltado_id, "texto": texto_id, "profesor": profesor_id,
+              "nivel": cambios.get("nivel"), "es_idea_principal": cambios.get("es_idea_principal"),
+              "cambiar_explicacion": "explicacion" in cambios, "explicacion": cambios.get("explicacion")}
+    fila = await uno(conn, SQL_ACTUALIZAR_RESALTADO, params)
+    if fila is None:
+        raise NoEncontrado("El resaltado")
     return fila
 
 

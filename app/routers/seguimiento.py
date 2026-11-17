@@ -1,6 +1,6 @@
 """Seguimiento del profesor: progreso, historial, panel, alertas y ajustes del curso."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, status
 
@@ -21,8 +21,10 @@ async def progreso(estudiante_id: int, yo: Profesor, conn: Conn):
             summary="Historial de respuestas del estudiante (RF-07)")
 async def historial(estudiante_id: int, yo: Profesor, conn: Conn,
                     limite: Annotated[int, Query(ge=1, le=500)] = 100,
-                    desde: Annotated[int, Query(ge=0)] = 0):
-    return await svc.historial(conn, yo.id, estudiante_id, limite, desde)
+                    desde: Annotated[int, Query(ge=0)] = 0,
+                    nivel: Annotated[Literal["macro", "super", "micro"] | None,
+                                     Query(description="Solo un nivel; vacío = todos")] = None):
+    return await svc.historial(conn, yo.id, estudiante_id, limite, desde, nivel)
 
 
 @router.get("/cursos/{curso_id}/panel", response_model=Panel,

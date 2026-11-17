@@ -3,7 +3,8 @@
 from fastapi import APIRouter, status
 
 from app.core.deps import Admin, Conn
-from app.schemas.admin import ClaveTemporal, ProfesorCambios, ProfesorNuevo, ProfesorSalida, ResumenAdmin
+from app.schemas.admin import (ClaveGenerada, ClaveTemporal, ProfesorCambios, ProfesorCreado, ProfesorNuevo,
+                               ProfesorSalida, ResumenAdmin)
 from app.schemas.cursos import EstudianteAdmin
 from app.schemas.seguimiento import Ajuste, NuevoValor
 from app.services import admin_service as svc
@@ -22,8 +23,8 @@ async def listar_profesores(_: Admin, conn: Conn):
     return await svc.listar_profesores(conn)
 
 
-@router.post("/profesores", response_model=ProfesorSalida, status_code=status.HTTP_201_CREATED,
-             summary="Crear cuenta de profesor (RF-02)")
+@router.post("/profesores", response_model=ProfesorCreado, status_code=status.HTTP_201_CREATED,
+             summary="Crear cuenta de profesor; usuario y clave temporal se generan si no se envían (RF-02)")
 async def crear_profesor(datos: ProfesorNuevo, _: Admin, conn: Conn):
     return await svc.crear_profesor(conn, datos.nombre, datos.usuario, datos.clave)
 
@@ -39,10 +40,10 @@ async def actualizar_profesor(profesor_id: int, datos: ProfesorCambios, _: Admin
     return await svc.actualizar_profesor(conn, profesor_id, datos.nombre, datos.activo)
 
 
-@router.post("/profesores/{profesor_id}/clave", status_code=status.HTTP_204_NO_CONTENT,
-             summary="Restablecer contraseña temporal y desbloquear (RF-02)")
+@router.post("/profesores/{profesor_id}/clave", response_model=ClaveGenerada,
+             summary="Restablecer contraseña temporal y desbloquear; sin clave, el sistema la genera (RF-02)")
 async def restablecer_clave(profesor_id: int, datos: ClaveTemporal, _: Admin, conn: Conn):
-    await svc.restablecer_clave(conn, profesor_id, datos.clave)
+    return await svc.restablecer_clave(conn, profesor_id, datos.clave)
 
 
 @router.get("/estudiantes", response_model=list[EstudianteAdmin], summary="Estudiantes registrados (RF-04)")

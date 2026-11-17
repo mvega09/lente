@@ -25,6 +25,11 @@ class ActividadResumen(BaseModel):
     terminada_en: datetime | None
 
 
+class TextoPendiente(BaseModel):
+    texto_id: int
+    titulo: str
+
+
 class Progreso(BaseModel):
     """RF-06 y RF-08: progreso individual y estadísticas de desempeño."""
 
@@ -49,6 +54,7 @@ class Progreso(BaseModel):
     porcentaje_micro: float | None
     animo: str | None = Field(description="Última tendencia registrada (RF-21)")
     aviso_animo: str = AVISO
+    pendientes: list[TextoPendiente] = Field(default=[], description="Textos activos que aún no termina (RF-06)")
     logros: list[LogroGanado]
     evolucion: list[ActividadResumen]
 
@@ -88,6 +94,9 @@ class Panel(BaseModel):
     clima: dict[str, int] = Field(description="Cuántos estudiantes en cada tendencia (RF-21)")
     aviso_clima: str = AVISO
     alertas_abiertas: int
+    avance_macro: float | None = Field(default=None, description="Promedio del curso en macroestructura (0-100)")
+    avance_super: float | None = Field(default=None, description="Promedio del curso en superestructura (0-100)")
+    avance_micro: float | None = Field(default=None, description="Promedio del curso en microestructura (0-100)")
     destacados: list[Destacado]
 
 

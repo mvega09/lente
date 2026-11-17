@@ -22,6 +22,18 @@ SELECT e.id, e.nombre, e.curso, e.grado_texto, e.nivel_escolar, e.puntos, e.nive
  WHERE e.id = %(id)s AND e.profesor_id = %(profesor)s
 """
 
+# Textos activos en su curso que aún no termina (se llama después de comprobar el profesor)
+SQL_PENDIENTES = """
+SELECT t.id AS texto_id, t.titulo
+  FROM lente.estudiantes s
+  JOIN lente.textos_del_curso tc ON tc.curso_id = s.curso_id AND tc.activo
+  JOIN lente.textos t ON t.id = tc.texto_id
+ WHERE s.id = %(id)s
+   AND NOT EXISTS (SELECT 1 FROM lente.actividades a
+                    WHERE a.texto_id = tc.texto_id AND a.estudiante_id = s.id AND a.estado = 'terminada')
+ ORDER BY tc.activado_en
+"""
+
 SQL_EVOLUCION = """
 SELECT a.id, t.titulo, a.numero, a.estado, a.resultado_macro, a.resultado_super, a.resultado_micro,
        a.puntos_ganados, a.iniciada_en, a.terminada_en
@@ -43,6 +55,7 @@ SELECT h.actividad_id, h.titulo, h.fecha, h.nivel, h.pregunta, h.respuesta, h.re
   FROM lente.vista_historial h
  WHERE h.estudiante_id = %(id)s
    AND EXISTS (SELECT 1 FROM lente.vista_estudiantes e WHERE e.id = %(id)s AND e.profesor_id = %(profesor)s)
+   AND (%(nivel)s::text IS NULL OR h.nivel = %(nivel)s::text)
  ORDER BY h.fecha DESC
  LIMIT %(limite)s OFFSET %(desde)s
 """
@@ -51,8 +64,15 @@ SQL_PANEL = """
 SELECT vp.curso_id, vp.curso, vp.estudiantes_activos, vp.participaron, vp.acierto_promedio,
        vp.puntos_del_curso, vp.racha_mas_larga, vp.animo_alto, vp.animo_neutral, vp.animo_requiere_apoyo,
        (SELECT count(*) FROM lente.alertas al JOIN lente.estudiantes s ON s.id = al.estudiante_id
-         WHERE s.curso_id = vp.curso_id AND NOT al.atendida) AS alertas_abiertas
+         WHERE s.curso_id = vp.curso_id AND NOT al.atendida) AS alertas_abiertas,
+       pr.avance_macro, pr.avance_super, pr.avance_micro
   FROM lente.vista_panel vp
+  LEFT JOIN LATERAL (
+       SELECT round(avg(p.porcentaje_macro)) AS avance_macro,
+              round(avg(p.porcentaje_super)) AS avance_super,
+              round(avg(p.porcentaje_micro)) AS avance_micro
+         FROM lente.vista_progreso p JOIN lente.estudiantes x ON x.id = p.estudiante_id
+        WHERE x.curso_id = vp.curso_id AND x.activo) pr ON true
  WHERE vp.curso_id = %(curso)s AND vp.profesor_id = %(profesor)s
 """
 
@@ -98,13 +118,14 @@ async def progreso(conn: AsyncConnection, profesor_id: int, estudiante_id: int) 
     p["animo"] = etiqueta(p["animo"])
     p["logros"] = await varios(conn, SQL_LOGROS_ESTUDIANTE, {"id": estudiante_id})
     p["evolucion"] = await varios(conn, SQL_EVOLUCION, {"id": estudiante_id})
+    p["pendientes"] = await varios(conn, SQL_PENDIENTES, {"id": estudiante_id})
     return p
 
 
 async def historial(conn: AsyncConnection, profesor_id: int, estudiante_id: int,
-                    limite: int, desde: int) -> list[dict]:
+                    limite: int, desde: int, nivel: str | None = None) -> list[dict]:
     filas = await varios(conn, SQL_HISTORIAL, {"id": estudiante_id, "profesor": profesor_id,
-                                               "limite": limite, "desde": desde})
+                                               "limite": limite, "desde": desde, "nivel": nivel})
     if not filas and desde == 0:
         await progreso(conn, profesor_id, estudiante_id)      # 404 si no es su estudiante
     return filas

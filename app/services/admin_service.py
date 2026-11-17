@@ -1,9 +1,15 @@
 """RF-02 y RF-04: cuentas de profesores y consulta general (solo administrador)."""
 
+import re
+import secrets
+import unicodedata
+
 from psycopg import AsyncConnection
 
 from app.core.db import uno, varios
-from app.core.errores import NoEncontrado
+from app.core.errores import Conflicto, NoEncontrado
+
+_ALFABETO_CLAVE = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
 
 SQL_LISTAR_PROFESORES = """
 SELECT id, nombre, usuario, activo, ultimo_ingreso, cursos, estudiantes
@@ -41,6 +47,11 @@ UPDATE lente.usuarios
 RETURNING id
 """
 
+SQL_USUARIOS_PARECIDOS = """
+SELECT lower(usuario) AS usuario FROM lente.usuarios
+ WHERE left(lower(usuario), length(%(base)s::text)) = %(base)s::text
+"""
+
 SQL_RESUMEN = """
 SELECT (SELECT count(*) FROM lente.usuarios WHERE rol = 'profesor')              AS total_profesores,
        (SELECT count(*) FROM lente.usuarios WHERE rol = 'profesor' AND activo)   AS profesores_activos,
@@ -67,9 +78,36 @@ async def obtener_profesor(conn: AsyncConnection, profesor_id: int) -> dict:
     return fila
 
 
-async def crear_profesor(conn: AsyncConnection, nombre: str, usuario: str, clave: str) -> dict:
-    nuevo = await uno(conn, SQL_CREAR_PROFESOR, {"nombre": nombre, "usuario": usuario, "clave": clave})
-    return await obtener_profesor(conn, nuevo["id"])
+def proponer_usuario(nombre: str) -> str:
+    """'Ana María Duque' → 'ana.maria.duque' (cumple el patrón de lente.usuarios)."""
+    t = unicodedata.normalize("NFD", nombre.lower())
+    t = "".join(c for c in t if unicodedata.category(c) != "Mn")
+    partes = re.findall(r"[a-z0-9]+", t)
+    base = ".".join(partes)[:40].strip(".")
+    return base if len(base) >= 3 else (base + ".profe")[:40]
+
+
+def generar_clave() -> str:
+    """Clave temporal legible, sin caracteres que se confundan (0/O, 1/l/I)."""
+    return "Lente-" + "".join(secrets.choice(_ALFABETO_CLAVE) for _ in range(8))
+
+
+async def _usuario_libre(conn: AsyncConnection, base: str) -> str:
+    usados = {f["usuario"] for f in await varios(conn, SQL_USUARIOS_PARECIDOS, {"base": base})}
+    if base not in usados:
+        return base
+    for n in range(2, 1000):
+        candidato = f"{base[:40 - len(str(n))]}{n}"
+        if candidato not in usados:
+            return candidato
+    raise Conflicto("No se encontró un nombre de usuario libre; escríbalo a mano")
+
+
+async def crear_profesor(conn: AsyncConnection, nombre: str, usuario: str | None, clave: str | None) -> dict:
+    usuario = usuario or await _usuario_libre(conn, proponer_usuario(nombre))
+    generada = None if clave else generar_clave()
+    nuevo = await uno(conn, SQL_CREAR_PROFESOR, {"nombre": nombre, "usuario": usuario, "clave": clave or generada})
+    return await obtener_profesor(conn, nuevo["id"]) | {"clave_temporal": generada}
 
 
 async def actualizar_profesor(conn: AsyncConnection, profesor_id: int, nombre: str | None,
@@ -80,9 +118,11 @@ async def actualizar_profesor(conn: AsyncConnection, profesor_id: int, nombre: s
     return await obtener_profesor(conn, profesor_id)
 
 
-async def restablecer_clave(conn: AsyncConnection, profesor_id: int, clave: str) -> None:
-    if await uno(conn, SQL_RESTABLECER_CLAVE, {"id": profesor_id, "clave": clave}) is None:
+async def restablecer_clave(conn: AsyncConnection, profesor_id: int, clave: str | None) -> dict:
+    generada = None if clave else generar_clave()
+    if await uno(conn, SQL_RESTABLECER_CLAVE, {"id": profesor_id, "clave": clave or generada}) is None:
         raise NoEncontrado("El profesor")
+    return {"clave_temporal": generada}
 
 
 async def resumen(conn: AsyncConnection) -> dict:
