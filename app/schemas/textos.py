@@ -18,7 +18,8 @@ class TextoNuevo(BaseModel):
     enlace: str | None = None
     fuente: str | None = Field(default=None, max_length=120)
     nota: str | None = Field(default=None, max_length=300)
-    preparar_con_ia: bool = Field(default=True, description="Si hay cuerpo, la IA prepara el paquete en segundo plano")
+    preparar_con_ia: bool = Field(default=True, description="La IA prepara el paquete en segundo plano. Si solo hay "
+                                                            "enlace, antes se lee el texto de la noticia desde la página")
 
     @model_validator(mode="after")
     def _cuerpo_o_enlace(self):
@@ -29,6 +30,9 @@ class TextoNuevo(BaseModel):
 
 class TextoCambios(BaseModel):
     titulo: str | None = Field(default=None, min_length=1, max_length=250)
+    cuerpo: str | None = Field(default=None, max_length=50_000,
+                               description="Solo si el texto aún no tiene cuerpo (llegó con enlace y no se pudo leer). "
+                                           "Después ya no cambia")
     enlace: str | None = None
     fuente: str | None = Field(default=None, max_length=120)
     nota: str | None = Field(default=None, max_length=300)

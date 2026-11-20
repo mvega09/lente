@@ -86,6 +86,13 @@ revisa y corrige) → `aprobado` → `archivado`. Mientras está `preparando`, c
 `GET /textos/{id}` cada 10 s y muestra que la IA está trabajando. Solo un texto `aprobado` se
 puede activar en un curso, y sin idea principal no se aprueba.
 
+**Noticias solo con enlace:** si el profesor pega el enlace sin el texto, la API lee
+la noticia desde la página (solo sitios públicos; 15 s como máximo) y la manda a la
+IA, al crear (`POST /textos`) o con `POST /textos/{id}/preparar`. Si la página no se
+puede leer (muro de pago, PDF, sitio caído), crear deja el texto en `borrador` con
+el motivo en `nota`, y preparar responde 422 con un mensaje para mostrar; en ese caso
+el profesor pega el texto una sola vez con `PATCH /textos/{id}` y `{"cuerpo": "..."}`.
+
 ### Actividad (el flujo más importante)
 
 El orden es obligatorio: macro → super → micro → resultado. Un paso fuera de orden responde

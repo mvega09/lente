@@ -7,6 +7,9 @@ pyjwt>=2.9
 # Worker de IA
 ollama>=0.5
 
+# Lectura de noticias desde su enlace
+trafilatura>=2.0
+
 # Documentación y pruebas
 mkdocs-material>=9.5
 pytest>=8.3

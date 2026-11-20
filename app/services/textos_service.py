@@ -5,13 +5,15 @@ Ciclo de vida de un texto:
 - Al pasar a 'preparando', un trigger deja el trabajo en la cola de la IA.
 - Solo se edita el paquete (idea, preguntas, palabras) en borrador o en revisión.
 - Un texto no se aprueba sin idea principal (CHECK en la base).
-- El cuerpo nunca se modifica.
+- El cuerpo nunca se modifica. Si el texto llegó solo con enlace, el cuerpo se lee
+  de la página al prepararlo (o el profesor lo pega una sola vez).
 """
 
 from psycopg import AsyncConnection
 
 from app.core.db import ejecutar, uno, varios
 from app.core.errores import Conflicto, DatoInvalido, NoEncontrado
+from app.services import extraccion
 
 EDITABLES = ("borrador", "en_revision")
 
@@ -40,6 +42,7 @@ RETURNING id
 SQL_ACTUALIZAR_DATOS = """
 UPDATE lente.textos
    SET titulo = coalesce(%(titulo)s::text, titulo),
+       cuerpo = CASE WHEN cuerpo IS NULL THEN %(cuerpo)s::text ELSE cuerpo END,
        enlace = coalesce(%(enlace)s::text, enlace),
        fuente = coalesce(%(fuente)s::text, fuente),
        nota   = coalesce(%(nota)s::text, nota)
@@ -55,6 +58,13 @@ UPDATE lente.textos
        consejo_super   = coalesce(%(consejo_super)s::text, consejo_super),
        consejo_micro   = coalesce(%(consejo_micro)s::text, consejo_micro)
  WHERE id = %(id)s AND profesor_id = %(profesor)s AND estado IN ('borrador', 'en_revision')
+RETURNING id
+"""
+
+# El cuerpo leído del enlace se guarda una sola vez (después ya no cambia)
+SQL_PONER_CUERPO = """
+UPDATE lente.textos SET cuerpo = %(cuerpo)s
+ WHERE id = %(id)s AND profesor_id = %(profesor)s AND cuerpo IS NULL AND estado IN ('borrador', 'en_revision')
 RETURNING id
 """
 
@@ -224,16 +234,27 @@ async def obtener(conn: AsyncConnection, profesor_id: int, texto_id: int, comple
 
 async def crear(conn: AsyncConnection, profesor_id: int, datos: dict) -> dict:
     cuerpo = (datos.get("cuerpo") or "").strip() or None
-    preparar = datos.pop("preparar_con_ia", True) and cuerpo is not None
-    params = {**datos, "cuerpo": cuerpo, "profesor": profesor_id,
-              "estado": "preparando" if preparar else "borrador"}
+    enlace = (datos.get("enlace") or "").strip() or None
+    quiere_ia = datos.pop("preparar_con_ia", True)
+    nota = datos.get("nota")
+    if cuerpo is None and enlace and quiere_ia:
+        # Solo enlace: se lee la noticia de la página para que la IA pueda prepararla
+        try:
+            cuerpo = await extraccion.texto_desde_enlace(enlace)
+        except extraccion.NoSePudoLeer as e:
+            nota = f"No se pudo leer la noticia del enlace: {e.mensaje}. Pegue el texto."[:300]
+    params = {**datos, "cuerpo": cuerpo, "enlace": enlace, "nota": nota, "profesor": profesor_id,
+              "estado": "preparando" if quiere_ia and cuerpo is not None else "borrador"}
     nuevo = await uno(conn, SQL_CREAR_TEXTO, params)
     return await obtener(conn, profesor_id, nuevo["id"])
 
 
 async def actualizar_datos(conn: AsyncConnection, profesor_id: int, texto_id: int, cambios: dict) -> dict:
-    params = {"id": texto_id, "profesor": profesor_id, "titulo": None, "enlace": None, "fuente": None, "nota": None}
+    params = {"id": texto_id, "profesor": profesor_id, "titulo": None, "enlace": None, "fuente": None, "nota": None,
+              "cuerpo": None}
     params.update(cambios)
+    if params["cuerpo"] is not None:
+        params["cuerpo"] = params["cuerpo"].strip() or None
     if await uno(conn, SQL_ACTUALIZAR_DATOS, params) is None:
         raise NoEncontrado("El texto")
     return await obtener(conn, profesor_id, texto_id)
@@ -267,7 +288,16 @@ async def _cambiar_estado(conn: AsyncConnection, profesor_id: int, texto_id: int
 async def preparar(conn: AsyncConnection, profesor_id: int, texto_id: int) -> dict:
     texto = await obtener(conn, profesor_id, texto_id, completo=False)
     if not texto["cuerpo"]:
-        raise Conflicto("El texto no tiene cuerpo: la IA no puede prepararlo")
+        if not texto["enlace"]:
+            raise Conflicto("El texto no tiene cuerpo ni enlace: la IA no puede prepararlo")
+        if texto["estado"] not in EDITABLES:
+            raise Conflicto("Solo se manda a la IA un texto en borrador o en revisión")
+        try:
+            cuerpo = await extraccion.texto_desde_enlace(texto["enlace"])
+        except extraccion.NoSePudoLeer as e:
+            raise DatoInvalido(f"No se pudo leer la noticia del enlace: {e.mensaje}. "
+                               "Pegue el texto de la noticia en el campo cuerpo.") from None
+        await uno(conn, SQL_PONER_CUERPO, {"id": texto_id, "profesor": profesor_id, "cuerpo": cuerpo})
     return await _cambiar_estado(conn, profesor_id, texto_id, "preparando", EDITABLES,
                                  "Solo se manda a la IA un texto en borrador o en revisión")
 
