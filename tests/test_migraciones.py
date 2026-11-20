@@ -77,5 +77,7 @@ def test_micro_cuenta_palabras_cargadas_distintas_no_marcas():
     cuerpo = _funcion(ESQUEMA, "terminar_actividad")
     assert "count(DISTINCT p.id) INTO aciertos" in cuerpo
     assert "count(*) FILTER (WHERE es_correcta)" not in cuerpo
-    m = re.search(r"CREATE FUNCTION terminar_actividad\(.*?END \$\$;", ESQUEMA, re.S)
-    assert pglast.parse_plpgsql(m.group(0))
+    # La consulta nueva, validada con el analizador de PostgreSQL (el de PL/pgSQL de
+    # pglast no admite funciones con esquema, como lente.normalizar)
+    consulta = re.search(r"SELECT count\(DISTINCT p\.id\) INTO aciertos.*?;", ESQUEMA, re.S).group(0)
+    pglast.parse_sql(consulta.replace(" INTO aciertos", ""))
