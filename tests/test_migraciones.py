@@ -66,3 +66,16 @@ def test_trabajos_interrumpidos_se_recuperan_antes_de_tomar_uno_nuevo():
     assert cuerpo.index("reportar_error_ia") < cuerpo.index("estado = 'procesando', intentos")
     assert "interval '20 minutes'" in cuerpo          # más que el límite de 15 min de la preparación
     assert "FOR UPDATE SKIP LOCKED" in cuerpo
+
+
+def test_migracion_002_coincide_con_schema():
+    sql = (RAIZ / "db" / "migraciones" / "002_micro_palabras_distintas.sql").read_text(encoding="utf-8")
+    assert _funcion(sql, "terminar_actividad") == _funcion(ESQUEMA, "terminar_actividad")
+
+
+def test_micro_cuenta_palabras_cargadas_distintas_no_marcas():
+    cuerpo = _funcion(ESQUEMA, "terminar_actividad")
+    assert "count(DISTINCT p.id) INTO aciertos" in cuerpo
+    assert "count(*) FILTER (WHERE es_correcta)" not in cuerpo
+    m = re.search(r"CREATE FUNCTION terminar_actividad\(.*?END \$\$;", ESQUEMA, re.S)
+    assert pglast.parse_plpgsql(m.group(0))

@@ -549,9 +549,17 @@ BEGIN
     FROM lente.respuestas WHERE actividad_id = p_actividad AND nivel = 'super';
 
   -- MICRO: (palabras acertadas − 0,5 × palabras neutras) / palabras cargadas del texto
-  SELECT count(*) FILTER (WHERE es_correcta), count(*) FILTER (WHERE NOT es_correcta)
-    INTO aciertos, neutras
-    FROM lente.respuestas WHERE actividad_id = p_actividad AND nivel = 'micro';
+  --   Aciertos = palabras cargadas DISTINTAS encontradas. El estudiante marca palabra por
+  --   palabra: varias marcas dentro de una misma expresión ("turbia y con olor a químicos")
+  --   cuentan una sola vez. Antes se contaban marcas y la nota podía llegar al 100 %.
+  SELECT count(DISTINCT p.id) INTO aciertos
+    FROM lente.palabras_cargadas p
+    JOIN lente.respuestas r ON r.actividad_id = p_actividad AND r.nivel = 'micro' AND r.es_correcta
+   WHERE p.texto_id = a.texto_id
+     AND (int4range(p.inicio, p.fin) && int4range(r.inicio, r.fin)
+          OR lente.normalizar(p.palabra) = lente.normalizar(r.texto));
+  SELECT count(*) INTO neutras
+    FROM lente.respuestas WHERE actividad_id = p_actividad AND nivel = 'micro' AND NOT es_correcta;
   SELECT count(*) INTO esperadas FROM lente.palabras_cargadas WHERE texto_id = a.texto_id;
   r_micro := CASE WHEN esperadas = 0 THEN 0
                   ELSE greatest(0, least(1, (least(aciertos, esperadas) - castigo * neutras) / esperadas)) END;

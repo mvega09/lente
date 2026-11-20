@@ -12,6 +12,10 @@ router = APIRouter(prefix="/auth", tags=["autenticación"])
 async def login(datos: LoginEntrada, conn: Conn) -> TokenSalida:
     usuario = await auth_service.iniciar_sesion(conn, datos.usuario, datos.clave)
     if usuario is None:
+        # La base ya sumó el intento fallido (con 5 se bloquea la cuenta). Se confirma ANTES
+        # de responder: el 401 es una excepción y, sin este commit, la transacción se
+        # deshacía con todo y el intento, así que el bloqueo nunca llegaba.
+        await conn.commit()
         # Mismo mensaje para usuario inexistente, clave errada o cuenta bloqueada
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario o clave incorrectos")
     return TokenSalida(access_token=crear_token(usuario), usuario=usuario)

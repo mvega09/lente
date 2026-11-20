@@ -32,3 +32,31 @@ def test_ninguna_ruta_pide_la_conexion_sin_el_atajo():
     raiz = pathlib.Path(__file__).resolve().parent.parent / "app" / "routers"
     for archivo in raiz.glob("*.py"):
         assert "Depends(get_conn" not in archivo.read_text(encoding="utf-8"), archivo.name
+
+
+def test_login_fallido_guarda_el_intento_antes_de_responder(monkeypatch):
+    """Sin el commit, el 401 deshacía la transacción y el contador de intentos (bloqueo
+    a los 5) nunca subía: se vio en la base real con dos logins fallidos y el contador en 0."""
+    from fastapi.testclient import TestClient
+
+    from app.core.db import get_conn
+    from app.main import app
+    from app.services import auth_service
+    from tests.conftest import ConexionFalsa
+
+    conn = ConexionFalsa()
+
+    async def _conn():
+        yield conn
+
+    async def sin_usuario(c, usuario, clave):
+        return None
+
+    monkeypatch.setattr(auth_service, "iniciar_sesion", sin_usuario)
+    app.dependency_overrides[get_conn] = _conn
+    try:
+        r = TestClient(app).post("/auth/login", json={"usuario": "prof", "clave": "mala"})
+    finally:
+        app.dependency_overrides.clear()
+    assert r.status_code == 401
+    assert conn.confirmaciones == 1

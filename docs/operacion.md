@@ -19,6 +19,7 @@ Después de aplicar una migración que cambia el worker, reiniciarlo en la VM-AP
 | Migración | Qué hace |
 |---|---|
 | `001_trabajos_atascados_y_abandono` | Reintenta los trabajos de IA que quedaron «procesando» si un worker se detuvo (3 min; 20 min al preparar textos) y marca como abandonadas las actividades sin respuestas durante `horas_para_abandono` (3 h), con análisis de ánimo (RF-21) |
+| `002_micro_palabras_distintas` | La nota de la micro cuenta palabras cargadas distintas encontradas, no marcas: varias palabras de una misma expresión valen un acierto |
 
 ## Copias de seguridad (VM-BD, RNF-04)
 

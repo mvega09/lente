@@ -44,9 +44,16 @@ class ConexionFalsa:
     def __init__(self, *filas):
         self.filas = list(filas)
         self.consultas: list[tuple[str, object]] = []
+        self.confirmaciones = 0
 
     def cursor(self):
         return _CursorFalso(self)
+
+    async def commit(self):
+        self.confirmaciones += 1
+
+    async def rollback(self):
+        pass
 
 
 @pytest.fixture
