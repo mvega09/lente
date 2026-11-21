@@ -76,6 +76,14 @@ UPDATE lente.textos
 RETURNING id
 """
 
+SQL_ACTIVIDADES_DEL_TEXTO = "SELECT count(*) AS n FROM lente.actividades WHERE texto_id = %(id)s"
+
+# Borra el texto con sus preguntas, palabras, resaltados, activaciones y trabajos de IA (ON DELETE CASCADE)
+SQL_BORRAR_TEXTO = """
+DELETE FROM lente.textos WHERE id = %(id)s AND profesor_id = %(profesor)s
+RETURNING id
+"""
+
 SQL_RETIRAR_DE_CURSOS = """
 UPDATE lente.textos_del_curso SET activo = false
  WHERE texto_id = %(id)s AND activo
@@ -320,6 +328,21 @@ async def archivar(conn: AsyncConnection, profesor_id: int, texto_id: int) -> di
     return await _cambiar_estado(conn, profesor_id, texto_id, "archivado",
                                  ("borrador", "en_revision", "aprobado"),
                                  "Este texto no se puede archivar en su estado actual")
+
+
+async def eliminar(conn: AsyncConnection, profesor_id: int, texto_id: int) -> None:
+    """Borra definitivamente un texto que ningún estudiante ha usado.
+
+    Si ya tiene actividades, se conserva para no perder el historial de los estudiantes
+    (RF-07, RNF-04): en ese caso solo se puede archivar.
+    """
+    texto = await obtener(conn, profesor_id, texto_id, completo=False)        # 404 si no es suyo
+    if texto["estado"] == "preparando":
+        raise Conflicto("La IA está preparando este texto; espere a que termine para borrarlo")
+    if (await uno(conn, SQL_ACTIVIDADES_DEL_TEXTO, {"id": texto_id}))["n"]:
+        raise Conflicto("Este texto ya tiene actividades de estudiantes y no se puede borrar "
+                        "sin perder su historial. Archívelo para ocultarlo")
+    await uno(conn, SQL_BORRAR_TEXTO, {"id": texto_id, "profesor": profesor_id})
 
 
 # ---------------------------------------------------------------- preguntas

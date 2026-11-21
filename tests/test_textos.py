@@ -32,8 +32,8 @@ def test_resaltado_rango_invalido(cliente):
     assert r.status_code == 422
 
 
-def test_admin_no_gestiona_textos(cliente):
-    assert cliente.get("/textos", headers=cabeceras("administrador")).status_code == 403
+def test_admin_debe_elegir_el_profesor_para_ver_textos(cliente):
+    assert cliente.get("/textos", headers=cabeceras("administrador")).status_code == 400
 
 
 # ---------------------------------------------------------------- servicio

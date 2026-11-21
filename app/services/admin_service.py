@@ -47,6 +47,9 @@ UPDATE lente.usuarios
 RETURNING id
 """
 
+# Administrador en modo supervisión: solo cuentas de profesor
+SQL_PROFESOR_A_SUPERVISAR = "SELECT id, nombre FROM lente.usuarios WHERE id = %(id)s AND rol = 'profesor'"
+
 SQL_USUARIOS_PARECIDOS = """
 SELECT lower(usuario) AS usuario FROM lente.usuarios
  WHERE left(lower(usuario), length(%(base)s::text)) = %(base)s::text

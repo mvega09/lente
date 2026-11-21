@@ -49,8 +49,8 @@ def test_progreso_ajeno_404():
         asyncio.run(svc.progreso(ConexionFalsa(None), 7, 99))
 
 
-def test_progreso_solo_profesor(cliente):
-    assert cliente.get("/estudiantes/1/progreso", headers=cabeceras("administrador")).status_code == 403
+def test_progreso_pide_elegir_profesor_al_administrador(cliente):
+    assert cliente.get("/estudiantes/1/progreso", headers=cabeceras("administrador")).status_code == 400
 
 
 def test_historial_limita_paginas(cliente):

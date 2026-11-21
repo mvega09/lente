@@ -112,6 +112,7 @@ pide algo de otro profesor recibe **404** (RNF-05).
 | `PATCH` | `/textos/{texto_id}` | Editar título, fuente, nota o enlace |
 | `DELETE` | `/textos/{texto_id}` | Archivar el texto |
 | `POST` | `/textos/{texto_id}/aprobar` | Aprobar el paquete; sin idea principal no se aprueba (RF-09) |
+| `DELETE` | `/textos/{texto_id}/definitivo` | Borrar definitivamente un texto que ningún estudiante ha usado |
 | `POST` | `/textos/{texto_id}/palabras` | Agregar palabra o expresión con carga emocional (RF-12) |
 | `DELETE` | `/textos/{texto_id}/palabras/{palabra_id}` | Quitar palabra |
 | `PATCH` | `/textos/{texto_id}/paquete` | Revisar la idea principal, los elementos clave y los consejos (RF-09) |

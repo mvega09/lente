@@ -64,6 +64,11 @@ async def volver_a_revision(texto_id: int, yo: Profesor, conn: Conn):
 async def archivar(texto_id: int, yo: Profesor, conn: Conn):
     return await svc.archivar(conn, yo.id, texto_id)
 
+@router.delete("/textos/{texto_id}/definitivo", status_code=NC,
+               summary="Borrar definitivamente un texto que ningún estudiante ha usado")
+async def eliminar(texto_id: int, yo: Profesor, conn: Conn):
+    await svc.eliminar(conn, yo.id, texto_id)
+
 
 # ---------------------------------------------------------------- preguntas (superestructura)
 

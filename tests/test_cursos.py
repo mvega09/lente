@@ -11,8 +11,9 @@ ESTUDIANTE = {"id": 5, "nombre": "Luis", "curso_id": 2, "curso": "7°B", "grado"
               "racha": 0, "mejor_racha": 0}
 
 
-def test_admin_no_ve_cursos_de_profesor(cliente):
-    assert cliente.get("/cursos", headers=cabeceras("administrador")).status_code == 403
+def test_admin_debe_elegir_el_profesor_para_ver_cursos(cliente):
+    # Sin X-Como-Profesor el administrador no ve cursos de nadie (modo supervisión: tests/test_supervision.py)
+    assert cliente.get("/cursos", headers=cabeceras("administrador")).status_code == 400
 
 
 def test_listar_cursos_usa_el_profesor_del_token(cliente, monkeypatch):

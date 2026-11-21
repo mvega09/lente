@@ -69,7 +69,7 @@ del colegio son compartidos). Nunca en el código ni en registros.
 | Inicio de sesión y cambio de clave | todos | `POST /auth/login`, `GET /auth/yo`, `POST /auth/cambiar-clave` |
 | Panel de administración | administrador | `GET /admin/resumen`, `GET/POST /admin/profesores`, `PATCH /admin/profesores/{id}`, `POST /admin/profesores/{id}/clave`, `GET /admin/estudiantes`, `GET/PUT /admin/ajustes` |
 | Mis cursos y estudiantes | profesor | `GET/POST /cursos`, `PATCH /cursos/{id}`, `GET/POST /cursos/{id}/estudiantes`, `GET/PATCH/DELETE /estudiantes/{id}` |
-| Biblioteca de textos | profesor | `GET/POST /textos`, `GET/PATCH/DELETE /textos/{id}` |
+| Biblioteca de textos | profesor | `GET/POST /textos`, `GET/PATCH /textos/{id}`, `DELETE /textos/{id}` (archivar), `DELETE /textos/{id}/definitivo` (borrar; 409 si ya tiene actividades o la IA lo está preparando: ofrece archivar) |
 | Revisar lo que propuso la IA | profesor | `PATCH /textos/{id}/paquete`, `POST/PATCH/DELETE /textos/{id}/preguntas`, `POST/DELETE /textos/{id}/palabras`, `POST /textos/{id}/preparar`, `POST /textos/{id}/aprobar`, `POST /textos/{id}/revisar` |
 | Modo explicación (resaltados) | profesor | `GET/POST /textos/{id}/resaltados`, `PATCH/DELETE /textos/{id}/resaltados/{id}` (el PATCH cambia nivel o explicación) |
 | Textos activos del curso | profesor | `GET/POST/DELETE /cursos/{id}/textos` |
@@ -78,6 +78,19 @@ del colegio son compartidos). Nunca en el código ni en registros.
 | Panel del curso y alertas | profesor | `GET /cursos/{id}/panel`, `GET /alertas`, `POST /alertas/{id}/atender` |
 | Reglas del curso (puntos y niveles) | profesor | `GET /cursos/{id}/ajustes`, `PUT/DELETE /cursos/{id}/ajustes/{clave}` |
 | Logros | administrador | `GET/POST /admin/logros`, `PATCH /admin/logros/{id}` (desactivar en vez de borrar) |
+
+### El administrador viendo los módulos de un profesor
+
+El administrador puede entrar a **todas** las pantallas del profesor (cursos, estudiantes,
+biblioteca, panel, actividades) y crear, editar o borrar como si fuera él. Para eso elige un
+profesor en el panel de administración y, mientras supervisa, cada llamada a las rutas del
+profesor lleva la cabecera `X-Como-Profesor: <id del profesor>`.
+
+- Sin la cabecera, el administrador recibe **400** en las rutas del profesor («Elija el profesor…»).
+- Con un id que no es de un profesor: **404**.
+- Si un profesor envía la cabecera, se ignora: siempre trabaja con lo suyo.
+- Guarda el profesor elegido en `sessionStorage` y bórralo al cerrar sesión. Muestra siempre
+  un aviso visible («Estás viendo los módulos de …») con la opción de terminar.
 
 ### Ciclo de un texto
 
@@ -167,6 +180,7 @@ donde `detail` es una lista con el campo que falló (`loc`).
 |---|---|
 | 401 | Borrar el token e ir al inicio de sesión (en el login: mostrar `detail`) |
 | 403 | El rol no tiene permiso: no muestres esa opción a ese rol |
+| 400 en rutas del profesor siendo administrador | Falta elegir el profesor a supervisar (`X-Como-Profesor`) |
 | 404 | «No encontrado» |
 | 409 | Regla del negocio (paso equivocado, duplicado, texto no aprobado): mostrar `detail` |
 | 422 | Marcar el campo indicado en `detail` |
