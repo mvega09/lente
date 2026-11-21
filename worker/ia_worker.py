@@ -19,7 +19,7 @@ from psycopg.rows import dict_row
 from pydantic import BaseModel
 
 from app.core.config import get_settings
-from worker import prompts
+from worker import gramatica, prompts
 from worker.modelos import Animo, PreparacionTexto, RevisionIdea
 
 log = logging.getLogger("lente.worker")
@@ -110,6 +110,39 @@ def revisar_idea(conn: psycopg.Connection, trabajo_id: int) -> None:
     log.info("revisar_idea %s: %s en %d ms (cita válida: %s)", trabajo_id, rev.veredicto, ms, cita_ok)
 
 
+NUM_PREDICT_PREPARACION = 1400
+
+
+def palabras_validas(prep: PreparacionTexto, cuerpo: str) -> list[dict]:
+    """Palabras cargadas que se guardan.
+
+    - Deben existir en el texto (si la IA cambió mayúsculas, se toma la forma real del texto).
+    - El tipo lo decide el análisis gramatical (worker/gramatica.py), no la IA.
+    - Se descartan nombres propios, cifras y palabras que no pueden tener carga por sí solas.
+    """
+    nlp = gramatica.analizador()
+    doc = nlp(cuerpo) if nlp else None
+    minusculas = cuerpo.lower()
+    salida, ocupados = [], []
+    for w in prep.palabras_cargadas:
+        palabra = w.palabra.strip()
+        pos = cuerpo.find(palabra)
+        if pos < 0:
+            pos = minusculas.find(palabra.lower())
+        if pos < 0 or not palabra:
+            continue
+        fin = pos + len(palabra)
+        if any(pos < f and i < fin for i, f in ocupados):      # se cruza con otra ya elegida
+            continue
+        tipo = gramatica.tipo_de(doc, pos, fin, w.tipo)
+        if tipo is None:
+            continue
+        ocupados.append((pos, fin))
+        salida.append({"palabra": cuerpo[pos:fin], "tipo": tipo, "inicio": pos, "fin": fin,
+                       "explicacion": w.explicacion})
+    return salida
+
+
 def preparar_texto(conn: psycopg.Connection, trabajo_id: int) -> None:
     d = conn.execute("SELECT * FROM ia_textos WHERE trabajo_id = %s", (trabajo_id,)).fetchone()
     if d is None or not d["cuerpo"]:
@@ -118,7 +151,7 @@ def preparar_texto(conn: psycopg.Connection, trabajo_id: int) -> None:
         ajuste(conn, "ia_modelo") or settings.ollama_modelo_preparacion,
         prompts.mensajes_preparar_texto(d["titulo"], d["cuerpo"], ajuste(conn, "ia_instrucciones_preparar")),
         PreparacionTexto,
-        num_predict=2000,
+        num_predict=NUM_PREDICT_PREPARACION,
         cliente=cliente_preparacion,
     )
     texto_id, cuerpo = d["texto_id"], d["cuerpo"]
@@ -140,16 +173,11 @@ def preparar_texto(conn: psycopg.Connection, trabajo_id: int) -> None:
                    VALUES (%s, %s, %s, %s, %s, %s)""",
                 (texto_id, orden, p.pregunta[:300], p.opciones, p.correcta, p.dificultad),
             )
-        usados: set[int] = set()
-        for w in prep.palabras_cargadas:
-            pos = cuerpo.find(w.palabra)          # solo palabras que existan en el texto
-            if pos < 0 or pos in usados or len(w.palabra) > 120:
-                continue
-            usados.add(pos)
+        for w in palabras_validas(prep, cuerpo):
             conn.execute(
                 """INSERT INTO palabras_cargadas (texto_id, palabra, tipo, inicio, fin, explicacion)
                    VALUES (%s, %s, %s, %s, %s, %s)""",
-                (texto_id, w.palabra, w.tipo, pos, pos + len(w.palabra), w.explicacion),
+                (texto_id, w["palabra"], w["tipo"], w["inicio"], w["fin"], w["explicacion"]),
             )
         conn.execute("SELECT terminar_preparacion(%s)", (trabajo_id,))
     log.info("preparar_texto %s: texto %s listo para revisión del profesor", trabajo_id, texto_id)

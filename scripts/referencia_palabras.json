@@ -1,0 +1,28 @@
+{
+  "_descripcion": "Anotación de referencia para medir la detección de palabras cargadas (RF-12, criterio 10.2). Palabras o expresiones con carga valorativa o emocional y su tipo: adjetivo, verbo o expresion (sustantivo con carga o frase). Hecha por el equipo de desarrollo como guía para ajustar el prompt; NO reemplaza la validación con el docente (>= 70 %).",
+  "6": {
+    "indignación": "expresion",
+    "no tenía como bajar por allá": "expresion",
+    "cadáver": "expresion",
+    "sigue ahí": "expresion",
+    "difíciles": "adjetivo",
+    "impacto emocional": "expresion"
+  },
+  "7": {
+    "escándalos": "expresion",
+    "escándalo": "expresion",
+    "polémica": "expresion",
+    "estalla": "verbo",
+    "delicado": "adjetivo",
+    "supuesto": "adjetivo",
+    "falsificación": "expresion",
+    "falso": "adjetivo",
+    "rechaza": "verbo",
+    "vulneren": "verbo",
+    "corrupción": "expresion",
+    "confesó": "verbo",
+    "falsificó": "verbo",
+    "importante": "adjetivo",
+    "clave": "adjetivo"
+  }
+}

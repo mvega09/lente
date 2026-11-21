@@ -4,7 +4,7 @@ Ollama recibe el JSON Schema de cada clase y Pydantic valida la respuesta.
 Si el modelo no cumple el formato, la tarea se reporta como error y se reintenta.
 """
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -40,26 +40,32 @@ class Animo(BaseModel):
     animo: Literal["motivacion_alta", "neutral", "requiere_apoyo"]
 
 
+# Los límites de longitud los aplica Ollama como gramática: en CPU el tiempo depende de
+# cuántos tokens se generan, así que respuestas cortas = preparación más rápida.
+Opcion = Annotated[str, Field(min_length=1, max_length=100)]
+Elemento = Annotated[str, Field(min_length=1, max_length=70)]
+
+
 class PreguntaIA(BaseModel):
-    pregunta: str
-    opciones: list[str] = Field(min_length=2, max_length=6)
-    correcta: int = Field(ge=1, le=6, description="Número de la opción correcta, empezando en 1")
+    pregunta: str = Field(max_length=180)
+    opciones: list[Opcion] = Field(min_length=3, max_length=4)
+    correcta: int = Field(ge=1, le=4, description="Número de la opción correcta, empezando en 1")
     dificultad: int = Field(ge=1, le=3)
 
 
 class PalabraIA(BaseModel):
-    palabra: str = Field(description="Copiada TEXTUALMENTE de la noticia")
+    palabra: str = Field(max_length=60, description="Copiada TEXTUALMENTE de la noticia")
     tipo: Literal["adjetivo", "verbo", "expresion"]
-    explicacion: str
+    explicacion: str = Field(max_length=110)
 
 
 class PreparacionTexto(BaseModel):
     """RF-09: lo que la IA propone y el profesor revisa antes de aprobar."""
 
-    idea_principal: str
-    elementos_clave: list[str] = Field(min_length=1, max_length=6)
-    consejo_macro: str
-    consejo_super: str
-    consejo_micro: str
-    preguntas: list[PreguntaIA] = Field(min_length=1, max_length=6)
-    palabras_cargadas: list[PalabraIA] = Field(max_length=15)
+    idea_principal: str = Field(max_length=320)
+    elementos_clave: list[Elemento] = Field(min_length=2, max_length=5)
+    consejo_macro: str = Field(max_length=200)
+    consejo_super: str = Field(max_length=200)
+    consejo_micro: str = Field(max_length=200)
+    preguntas: list[PreguntaIA] = Field(min_length=3, max_length=4)
+    palabras_cargadas: list[PalabraIA] = Field(min_length=1, max_length=8)

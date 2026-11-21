@@ -10,6 +10,10 @@ ollama>=0.5
 # Lectura de noticias desde su enlace
 trafilatura>=2.0
 
+# Tipo gramatical de las palabras cargadas (adjetivo, verbo, expresión)
+spacy>=3.8,<3.9
+es_core_news_md @ https://github.com/explosion/spacy-models/releases/download/es_core_news_md-3.8.0/es_core_news_md-3.8.0-py3-none-any.whl
+
 # Documentación y pruebas
 mkdocs-material>=9.5
 pytest>=8.3
