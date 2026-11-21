@@ -10,6 +10,7 @@ tamaño y de redirecciones.
 
 import asyncio
 import ipaddress
+import re
 import socket
 from urllib.parse import urljoin, urlsplit
 
@@ -79,12 +80,39 @@ async def descargar(url: str, transport: httpx.AsyncBaseTransport | None = None)
     raise NoSePudoLeer("el enlace redirige demasiadas veces")
 
 
+# Publicaciones de redes sociales incrustadas en la noticia: no son parte del artículo
+_EMBEBIDOS = (r"<blockquote[^>]*class=[\"'][^\"']*(?:twitter-tweet|twitter-video|instagram-media|tiktok-embed)"
+              r"[^\"']*[\"'][^>]*>.*?</blockquote>")
+EMBEBIDOS = re.compile(_EMBEBIDOS, re.IGNORECASE | re.DOTALL)
+# La página llega en bytes: se limpia sin decodificar para que trafilatura detecte la codificación
+EMBEBIDOS_BYTES = re.compile(_EMBEBIDOS.encode(), re.IGNORECASE | re.DOTALL)
+# Restos de un tweet que a veces quedan como párrafo: enlaces de la red social y la firma
+ENLACE_RED_SOCIAL = re.compile(r"https?://(?:t\.co|pic\.twitter\.com|(?:www\.)?(?:x|twitter)\.com)/\S*",
+                               re.IGNORECASE)
+FIRMA_TWEET = re.compile(r"^[—–-]\s*.{1,80}\(@\w{1,30}\)\s+\w+\s+\d{1,2},\s+\d{4}$")
+
+
+def _sin_embebidos(html: bytes | str) -> bytes | str:
+    if isinstance(html, bytes):
+        return EMBEBIDOS_BYTES.sub(b" ", html)
+    return EMBEBIDOS.sub(" ", html)
+
+
+def _es_del_articulo(parrafo: str) -> bool:
+    return not (ENLACE_RED_SOCIAL.search(parrafo) or FIRMA_TWEET.match(parrafo))
+
+
 def extraer(html: bytes | str) -> str:
-    """Solo el artículo: sin menús, publicidad ni comentarios. Párrafos separados por una
-    línea en blanco, como los espera el frontend."""
-    texto = trafilatura.extract(html, include_comments=False, include_tables=False,
-                                favor_precision=True, deduplicate=True) or ""
+    """Solo el artículo: sin menús, publicidad, comentarios ni publicaciones de redes
+    sociales incrustadas. Párrafos separados por una línea en blanco, como los espera
+    el frontend."""
+    # deduplicate=False: la deduplicación de trafilatura recuerda párrafos ENTRE llamadas
+    # (caché global del proceso); al leer la misma noticia por tercera vez borraba párrafos.
+    # Los repetidos dentro de la misma página se quitan aquí.
+    texto = trafilatura.extract(_sin_embebidos(html), include_comments=False, include_tables=False,
+                                favor_precision=True, deduplicate=False) or ""
     parrafos = [" ".join(p.split()) for p in texto.split("\n") if p.strip()]
+    parrafos = list(dict.fromkeys(p for p in parrafos if _es_del_articulo(p)))
     resultado = "\n\n".join(parrafos)
     if len(resultado) < MIN_CARACTERES:
         raise NoSePudoLeer("no se encontró el texto de la noticia en la página (puede requerir suscripción)")

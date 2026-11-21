@@ -69,6 +69,41 @@ def test_extrae_solo_el_articulo_en_parrafos():
     assert PARRAFOS[0].strip() in texto
 
 
+TWEET = ('<blockquote class="twitter-tweet"><p lang="es">Así fue como un hombre dejó amenazas en la cárcel. '
+         '<a href="https://t.co/f0wz5K8LNE">https://t.co/f0wz5K8LNE</a></p>&mdash; Revista Semana '
+         '(@RevistaSemana) <a href="https://twitter.com/x/status/1">November 20, 2026</a></blockquote>')
+
+
+@pytest.mark.parametrize("como", [str, lambda h: h.encode("utf-8")])
+def test_quita_publicaciones_de_redes_sociales_incrustadas(como):
+    html = HTML.replace(f"<p>{PARRAFOS[2]}</p>", f"<p>{PARRAFOS[2]}</p>{TWEET}")
+    texto = extraccion.extraer(como(html))
+    assert "t.co" not in texto and "@RevistaSemana" not in texto and "dejó amenazas" not in texto
+    assert PARRAFOS[3].strip() in texto
+
+
+@pytest.mark.parametrize(("parrafo", "es_del_articulo"), [
+    ("Así fue como un hombre dejó una cava. https://t.co/f0wz5K8LNE https://t.co/AetGYhIPKs", False),
+    ("— Revista Semana (@RevistaSemana) November 20, 2026", False),
+    ("Mire el video en https://x.com/RevistaSemana/status/1", False),
+    ("El Inpec alertó este viernes sobre un presunto plan contra sus sedes.", True),
+    ("La exdecana dijo: «Esa no es mi firma» — 20 de noviembre de 2026.", True),
+])
+def test_restos_de_tweets_se_descartan(parrafo, es_del_articulo):
+    assert extraccion._es_del_articulo(parrafo) is es_del_articulo
+
+
+def test_leer_la_misma_noticia_varias_veces_da_el_mismo_texto():
+    primero = extraccion.extraer(HTML)
+    for _ in range(4):                             # antes, a la tercera lectura se perdían párrafos
+        assert extraccion.extraer(HTML) == primero
+
+
+def test_parrafos_repetidos_en_la_pagina_quedan_una_vez():
+    html = HTML.replace(f"<p>{PARRAFOS[1]}</p>", f"<p>{PARRAFOS[1]}</p><p>{PARRAFOS[1]}</p>")
+    assert extraccion.extraer(html).count(PARRAFOS[1].strip()) == 1
+
+
 def test_pagina_sin_articulo_pide_pegar_el_texto():
     with pytest.raises(extraccion.NoSePudoLeer, match="suscripción"):
         extraccion.extraer("<html><body><p>Contenido exclusivo para suscriptores.</p></body></html>")
