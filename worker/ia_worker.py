@@ -9,6 +9,8 @@ Ejecutar:  python -m worker.ia_worker
 """
 
 import logging
+import random
+import re
 import signal
 import time
 from typing import TypeVar
@@ -113,6 +115,42 @@ def revisar_idea(conn: psycopg.Connection, trabajo_id: int) -> None:
 NUM_PREDICT_PREPARACION = 1400
 
 
+def mezclar_opciones(preguntas: list, semilla: int) -> list[tuple[object, list[str], int]]:
+    """Cambia de lugar la respuesta correcta de cada pregunta.
+
+    El modelo casi siempre pone la correcta de primera; un estudiante aprendería a marcar
+    siempre la opción 1. Aquí cada pregunta la recibe en otra posición (nunca la misma que
+    la pregunta anterior) y los distractores se mezclan. Con la misma semilla (el id del
+    texto) el resultado es siempre igual. Se omiten las preguntas con `correcta` inválida.
+    """
+    azar = random.Random(semilla)
+    salida, anterior = [], None
+    for p in preguntas:
+        if not 1 <= p.correcta <= len(p.opciones):
+            continue
+        correcta = p.opciones[p.correcta - 1]
+        otras = [o for i, o in enumerate(p.opciones) if i != p.correcta - 1]
+        azar.shuffle(otras)
+        lugares = [i for i in range(len(p.opciones)) if i != anterior] or list(range(len(p.opciones)))
+        lugar = azar.choice(lugares)
+        otras.insert(lugar, correcta)
+        salida.append((p, otras, lugar + 1))
+        anterior = lugar
+    return salida
+
+
+_AJENOS = re.compile(r"[^\x20-\x7E -ɏ‐-‟…]")
+
+
+def explicacion_limpia(texto: str, limite: int = 110) -> str | None:
+    """Sin caracteres ajenos al español (la gramática a veces corta un token a la mitad y
+    queda basura como «malest嚣») y, si llegó al límite, cortada en la última palabra completa."""
+    texto = " ".join(_AJENOS.sub("", texto).split())
+    if len(texto) >= limite - 2 and " " in texto:
+        texto = texto[: texto.rfind(" ")].rstrip(",;: ") + "…"
+    return texto or None
+
+
 def palabras_validas(prep: PreparacionTexto, cuerpo: str) -> list[dict]:
     """Palabras cargadas que se guardan.
 
@@ -139,7 +177,7 @@ def palabras_validas(prep: PreparacionTexto, cuerpo: str) -> list[dict]:
             continue
         ocupados.append((pos, fin))
         salida.append({"palabra": cuerpo[pos:fin], "tipo": tipo, "inicio": pos, "fin": fin,
-                       "explicacion": w.explicacion})
+                       "explicacion": explicacion_limpia(w.explicacion)})
     return salida
 
 
@@ -165,13 +203,11 @@ def preparar_texto(conn: psycopg.Connection, trabajo_id: int) -> None:
         )
         conn.execute("DELETE FROM preguntas WHERE texto_id = %s", (texto_id,))
         conn.execute("DELETE FROM palabras_cargadas WHERE texto_id = %s", (texto_id,))
-        for orden, p in enumerate(prep.preguntas, start=1):
-            if not 1 <= p.correcta <= len(p.opciones):
-                continue
+        for orden, (p, opciones, correcta) in enumerate(mezclar_opciones(prep.preguntas, texto_id), start=1):
             conn.execute(
                 """INSERT INTO preguntas (texto_id, orden, pregunta, opciones, correcta, dificultad)
                    VALUES (%s, %s, %s, %s, %s, %s)""",
-                (texto_id, orden, p.pregunta[:300], p.opciones, p.correcta, p.dificultad),
+                (texto_id, orden, p.pregunta[:300], opciones, correcta, p.dificultad),
             )
         for w in palabras_validas(prep, cuerpo):
             conn.execute(
