@@ -18,6 +18,7 @@ nav:
   - Hoja de ruta: hoja-de-ruta.md
   - Tiempos de la IA: benchmark-ia.md
   - Operación del servidor: operacion.md
+  - Comandos de consulta: comandos.md
 
 markdown_extensions:
   - admonition
