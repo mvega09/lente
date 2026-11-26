@@ -250,7 +250,7 @@ async def crear(conn: AsyncConnection, profesor_id: int, datos: dict) -> dict:
         try:
             cuerpo = await extraccion.texto_desde_enlace(enlace)
         except extraccion.NoSePudoLeer as e:
-            nota = f"No se pudo leer la noticia del enlace: {e.mensaje}. Pegue el texto."[:300]
+            nota = aviso_enlace_ilegible(e.mensaje)
     params = {**datos, "cuerpo": cuerpo, "enlace": enlace, "nota": nota, "profesor": profesor_id,
               "estado": "preparando" if quiere_ia and cuerpo is not None else "borrador"}
     nuevo = await uno(conn, SQL_CREAR_TEXTO, params)
@@ -293,6 +293,12 @@ async def _cambiar_estado(conn: AsyncConnection, profesor_id: int, texto_id: int
     return await obtener(conn, profesor_id, texto_id)
 
 
+def aviso_enlace_ilegible(motivo: str) -> str:
+    """Qué pasó con el enlace y qué hacer, en palabras del profesor (cabe en `nota`: 300)."""
+    return (f"{motivo} Para usarla, copia el texto de la noticia desde tu navegador, borra esta "
+            "tarjeta y súbela de nuevo pegándolo en «Texto completo».")[:300]
+
+
 async def preparar(conn: AsyncConnection, profesor_id: int, texto_id: int) -> dict:
     texto = await obtener(conn, profesor_id, texto_id, completo=False)
     if not texto["cuerpo"]:
@@ -303,8 +309,7 @@ async def preparar(conn: AsyncConnection, profesor_id: int, texto_id: int) -> di
         try:
             cuerpo = await extraccion.texto_desde_enlace(texto["enlace"])
         except extraccion.NoSePudoLeer as e:
-            raise DatoInvalido(f"No se pudo leer la noticia del enlace: {e.mensaje}. "
-                               "Pegue el texto de la noticia en el campo cuerpo.") from None
+            raise DatoInvalido(aviso_enlace_ilegible(e.mensaje)) from None
         await uno(conn, SQL_PONER_CUERPO, {"id": texto_id, "profesor": profesor_id, "cuerpo": cuerpo})
     return await _cambiar_estado(conn, profesor_id, texto_id, "preparando", EDITABLES,
                                  "Solo se manda a la IA un texto en borrador o en revisión")

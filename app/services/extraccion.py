@@ -33,22 +33,33 @@ class NoSePudoLeer(Exception):
         self.mensaje = mensaje
 
 
+def mensaje_por_codigo(codigo: int) -> str:
+    """El código HTTP del sitio, dicho en palabras del profesor (sin «código 403»)."""
+    if codigo in (401, 402, 403, 429, 451):
+        return "Este sitio no permite que LENTE lea sus noticias automáticamente."
+    if codigo in (404, 410):
+        return "La página del enlace no existe; revisa que esté bien copiado."
+    if codigo >= 500:
+        return "El sitio de la noticia no está respondiendo en este momento."
+    return f"El sitio de la noticia no entregó la página (respuesta {codigo})."
+
+
 async def validar_destino(url: str) -> None:
     """Solo http/https hacia direcciones públicas (nunca la red interna)."""
     partes = urlsplit(url)
     if partes.scheme not in ("http", "https") or not partes.hostname:
-        raise NoSePudoLeer("el enlace debe empezar por http:// o https://")
+        raise NoSePudoLeer("El enlace debe empezar por http:// o https://.")
     if partes.username or partes.password:
-        raise NoSePudoLeer("el enlace no puede llevar usuario ni contraseña")
+        raise NoSePudoLeer("El enlace no puede llevar usuario ni contraseña.")
     puerto = partes.port or (443 if partes.scheme == "https" else 80)
     try:
         direcciones = await asyncio.get_running_loop().getaddrinfo(partes.hostname, puerto, type=socket.SOCK_STREAM)
     except socket.gaierror:
-        raise NoSePudoLeer("no se encontró el sitio web del enlace") from None
+        raise NoSePudoLeer("No se encontró el sitio web del enlace; revisa que esté bien escrito.") from None
     for *_, destino in direcciones:
         ip = ipaddress.ip_address(destino[0])
         if not ip.is_global:
-            raise NoSePudoLeer("el enlace apunta a una dirección interna; solo se aceptan sitios públicos")
+            raise NoSePudoLeer("El enlace apunta a una dirección interna; solo se aceptan sitios públicos.")
 
 
 async def descargar(url: str, transport: httpx.AsyncBaseTransport | None = None) -> bytes:
@@ -64,20 +75,20 @@ async def descargar(url: str, transport: httpx.AsyncBaseTransport | None = None)
                         url = urljoin(url, r.headers.get("location", ""))
                         continue
                     if r.status_code != 200:
-                        raise NoSePudoLeer(f"la página respondió con el código {r.status_code}")
+                        raise NoSePudoLeer(mensaje_por_codigo(r.status_code))
                     if "html" not in r.headers.get("content-type", "html"):
-                        raise NoSePudoLeer("el enlace no es una página web (¿es un PDF o una imagen?)")
+                        raise NoSePudoLeer("El enlace no es una página web (¿es un PDF o una imagen?).")
                     contenido = bytearray()
                     async for trozo in r.aiter_bytes():
                         contenido += trozo
                         if len(contenido) > MAX_BYTES:
-                            raise NoSePudoLeer("la página es demasiado grande")
+                            raise NoSePudoLeer("La página es demasiado grande.")
                     return bytes(contenido)
             except httpx.TimeoutException:
-                raise NoSePudoLeer(f"la página no respondió en {TIEMPO_MAXIMO_S} segundos") from None
+                raise NoSePudoLeer(f"La página no respondió en {TIEMPO_MAXIMO_S} segundos.") from None
             except httpx.HTTPError:
-                raise NoSePudoLeer("no se pudo conectar con el sitio web") from None
-    raise NoSePudoLeer("el enlace redirige demasiadas veces")
+                raise NoSePudoLeer("No se pudo conectar con el sitio web de la noticia.") from None
+    raise NoSePudoLeer("El enlace redirige demasiadas veces.")
 
 
 # Publicaciones de redes sociales incrustadas en la noticia: no son parte del artículo
@@ -115,7 +126,7 @@ def extraer(html: bytes | str) -> str:
     parrafos = list(dict.fromkeys(p for p in parrafos if _es_del_articulo(p)))
     resultado = "\n\n".join(parrafos)
     if len(resultado) < MIN_CARACTERES:
-        raise NoSePudoLeer("no se encontró el texto de la noticia en la página (puede requerir suscripción)")
+        raise NoSePudoLeer("No se encontró el texto de la noticia en la página (puede requerir suscripción).")
     if len(resultado) > MAX_CARACTERES:
         corte = resultado.rfind("\n\n", 0, MAX_CARACTERES)
         resultado = resultado[:corte if corte > 0 else MAX_CARACTERES]

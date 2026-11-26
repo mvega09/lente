@@ -56,7 +56,7 @@ def test_sigue_redirecciones_publicas_y_rechaza_lo_que_no_es_html():
     assert b"<article>" in asyncio.run(extraccion.descargar("http://93.184.216.34/a", transport=t))
     with pytest.raises(extraccion.NoSePudoLeer, match="PDF"):
         asyncio.run(extraccion.descargar("http://93.184.216.34/pdf", transport=t))
-    with pytest.raises(extraccion.NoSePudoLeer, match="404"):
+    with pytest.raises(extraccion.NoSePudoLeer, match="no existe"):
         asyncio.run(extraccion.descargar("http://93.184.216.34/caido", transport=t))
 
 
@@ -141,14 +141,15 @@ def test_crear_solo_con_enlace_lee_la_noticia_y_la_manda_a_la_ia(monkeypatch):
 
 def test_crear_con_enlace_ilegible_queda_en_borrador_con_aviso(monkeypatch):
     async def falla(url):
-        raise extraccion.NoSePudoLeer("la página respondió con el código 403")
+        raise extraccion.NoSePudoLeer(extraccion.mensaje_por_codigo(403))
     monkeypatch.setattr(extraccion, "texto_desde_enlace", falla)
     conn = ConexionFalsa({"id": 9}, _texto(), [], [])
     asyncio.run(textos_service.crear(conn, 7, {"titulo": "Fallecido", "enlace": "https://x.com/n", "cuerpo": None,
                                                "preparar_con_ia": True, "tipo": "noticia", "fuente": None, "nota": None}))
     insertado = conn.consultas[0][1]
     assert insertado["estado"] == "borrador" and insertado["cuerpo"] is None
-    assert "403" in insertado["nota"] and len(insertado["nota"]) <= 300
+    assert "no permite que LENTE" in insertado["nota"] and "Texto completo" in insertado["nota"]
+    assert "403" not in insertado["nota"] and "cuerpo" not in insertado["nota"] and len(insertado["nota"]) <= 300
 
 
 def test_preparar_un_texto_que_solo_tiene_enlace(monkeypatch):
@@ -162,9 +163,16 @@ def test_preparar_un_texto_que_solo_tiene_enlace(monkeypatch):
     assert sql.index(textos_service.SQL_PONER_CUERPO) < sql.index(textos_service.SQL_CAMBIAR_ESTADO)
 
 
+@pytest.mark.parametrize(("codigo", "dice"), [(403, "no permite que LENTE"), (429, "no permite que LENTE"),
+                                              (404, "no existe"), (503, "no está respondiendo"), (418, "418")])
+def test_codigos_del_sitio_en_palabras_del_profesor(codigo, dice):
+    mensaje = extraccion.mensaje_por_codigo(codigo)
+    assert dice in mensaje and "código" not in mensaje and mensaje.endswith(".")
+
+
 def test_preparar_con_enlace_ilegible_explica_que_pegue_el_texto(monkeypatch):
     async def falla(url):
         raise extraccion.NoSePudoLeer("no se encontró el texto de la noticia en la página (puede requerir suscripción)")
     monkeypatch.setattr(extraccion, "texto_desde_enlace", falla)
-    with pytest.raises(DatoInvalido, match="Pegue el texto"):
+    with pytest.raises(DatoInvalido, match="Texto completo"):
         asyncio.run(textos_service.preparar(ConexionFalsa(_texto()), 7, 9))
