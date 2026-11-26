@@ -21,7 +21,7 @@ from psycopg.rows import dict_row
 from pydantic import BaseModel
 
 from app.core.config import get_settings
-from worker import gramatica, prompts
+from worker import gramatica, prompts, revision
 from worker.modelos import Animo, PreparacionTexto, RevisionIdea
 
 log = logging.getLogger("lente.worker")
@@ -92,6 +92,16 @@ def revisar_idea(conn: psycopg.Connection, trabajo_id: int) -> None:
     d = conn.execute("SELECT * FROM ia_ideas WHERE trabajo_id = %s", (trabajo_id,)).fetchone()
     if d is None:
         raise ValueError("No se encontraron datos para la revisión")
+    respuesta = d["respuesta_estudiante"] or ""
+    if not revision.tiene_sentido(respuesta):
+        # Teclazos o letras al azar: no se gasta la IA (y no puede aprobarlos por error)
+        conn.execute(
+            "SELECT guardar_revision_idea(%s, %s, %s, %s, %s, %s) AS ok",
+            (trabajo_id, "por_mejorar", "", revision.EXPLICACION_SIN_SENTIDO,
+             revision.primera_frase(d["texto"]), 0),
+        )
+        log.info("revisar_idea %s: por_mejorar sin IA (la respuesta no tiene palabras reconocibles)", trabajo_id)
+        return
     modelo = modelo_validacion(conn)
     instrucciones = ajuste(conn, "ia_instrucciones_revisar")
     inicio = time.perf_counter()
@@ -104,12 +114,21 @@ def revisar_idea(conn: psycopg.Connection, trabajo_id: int) -> None:
         keep_alive=settings.ollama_keep_alive_validacion,
     )
     ms = int((time.perf_counter() - inicio) * 1000)
+    en_comun = revision.palabras_en_comun(respuesta, d["texto"], d["idea_principal"] or "",
+                                          " ".join(d["elementos_clave"] or []))
+    veredicto, explicacion_nueva = revision.ajustar_veredicto(rev.veredicto, rev.faltantes, rev.explicacion, en_comun)
+    explicacion, cita = rev.explicacion, rev.cita
+    if explicacion_nueva:
+        explicacion, cita = explicacion_nueva, revision.primera_frase(d["texto"])
+    if veredicto != rev.veredicto:
+        log.info("revisar_idea %s: la IA dijo %s, se corrige a %s (%d palabras en común)",
+                 trabajo_id, rev.veredicto, veredicto, en_comun)
     # guardar_revision_idea verifica en la base que la cita exista en el texto
     cita_ok = conn.execute(
         "SELECT guardar_revision_idea(%s, %s, %s, %s, %s, %s) AS ok",
-        (trabajo_id, rev.veredicto, rev.faltantes, rev.explicacion, rev.cita, ms),
+        (trabajo_id, veredicto, rev.faltantes, explicacion, cita, ms),
     ).fetchone()["ok"]
-    log.info("revisar_idea %s: %s en %d ms (cita válida: %s)", trabajo_id, rev.veredicto, ms, cita_ok)
+    log.info("revisar_idea %s: %s en %d ms (cita válida: %s)", trabajo_id, veredicto, ms, cita_ok)
 
 
 NUM_PREDICT_PREPARACION = 1400
